@@ -1,0 +1,6 @@
+{
+  "repositories": {
+    "ember-pdui": "../test-repo"
+  },
+  "workingDirectory": "./data"
+}
