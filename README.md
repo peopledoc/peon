@@ -15,7 +15,7 @@ requirements:
 output: ./dist
 
 environment:
-  ROOT_URL: "${PEON_ROOT_URL}"
+  ROOT_URL: "$PEON_ROOT_URL"
 
 commands:
   - yarn

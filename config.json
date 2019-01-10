@@ -1,6 +1,11 @@
 {
   "repositories": {
-    "ember-pdui": "../test-repo"
+    "ember-pdui": {
+      "url": "git@github.com:peopledoc/ember-peopledoc-ui",
+      "branch": "peon"
+    }
   },
-  "workingDirectory": "./data"
+  "workingDirectory": "./data",
+  "publicDirectory": "./public",
+  "rootURLBase": "/my-peon-apps/"
 }
