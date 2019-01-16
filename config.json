@@ -5,7 +5,9 @@
       "branches": ["peon"]
     }
   },
-  "allowUnknownRepositories": true,
+  "unknownRepositories": {
+    "allowOrgs": ["peopledoc"]
+  },
   "workingDirectory": "./data",
   "publicDirectory": "./public",
   "rootURLBase": "/",
