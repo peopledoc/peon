@@ -2,7 +2,7 @@
   "repositories": {
     "ember-pdui": {
       "url": "git@github.com:peopledoc/ember-peopledoc-ui",
-      "branch": "peon"
+      "branches": ["peon"]
     }
   },
   "allowUnknownRepositories": true,
