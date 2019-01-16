@@ -5,6 +5,7 @@
       "branch": "peon"
     }
   },
+  "allowUnknownRepositories": true,
   "workingDirectory": "./data",
   "publicDirectory": "./public",
   "rootURLBase": "/",
