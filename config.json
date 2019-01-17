@@ -2,12 +2,12 @@
   "watcher": {
     "enabled": true,
     "interval": 5000,
-    "repositories": {
-      "ember-pdui": {
+    "repositories": [
+      {
         "url": "git@github.com:peopledoc/ember-peopledoc-ui",
         "branches": ["peon"]
       }
-    }
+    ]
   },
 
   "webhooks": {
