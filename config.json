@@ -1,17 +1,26 @@
 {
-  "repositories": {
-    "ember-pdui": {
-      "url": "git@github.com:peopledoc/ember-peopledoc-ui",
-      "branches": ["peon"]
+  "watcher": {
+    "enabled": true,
+    "interval": 5000,
+    "repositories": {
+      "ember-pdui": {
+        "url": "git@github.com:peopledoc/ember-peopledoc-ui",
+        "branches": ["peon"]
+      }
     }
   },
-  "unknownRepositories": {
-    "allowOrgs": ["peopledoc"]
+
+  "webhooks": {
+    "enabled": true,
+    "port": 1234,
+    "secret": "peon-super-secret"
   },
+
   "workingDirectory": "./data",
   "publicDirectory": "./public",
   "rootURLBase": "/",
+
   "logger": {
-    "level": "info"
+    "level": "debug"
   }
 }
