@@ -1,0 +1,31 @@
+<title>{{buildId}} - Peon</title>
+<style>
+  .status-pending, .status-running, .status-cancelled {
+    background-color: #ddd;
+  }
+
+  .status-running .duration {
+    display: none;
+  }
+
+  .status-success {
+    background-color: #dfd;
+  }
+
+  .status-failed {
+    background-color: #fdd;
+  }
+</style>
+<h1 class="status-{{status}}">Build {{buildId}} <span class="duration">({{duration}} ms)</span></h1>
+
+Building SHA {{sha}} on branch {{branch}}<br>
+Enqueued at {{date enqueued}}<br>
+{{#if start}}Started at {{date start}}<br>{{/if}}
+{{#if end}}Finished at {{date end}}<br>{{/if}}
+
+{{#each steps}}
+  <h2 class="status-{{status}}">{{description}} <span class="duration">({{duration}} ms)</span></h2>
+  {{#if output}}
+    <pre>{{output}}</pre>
+  {{/if}}
+{{/each}}
