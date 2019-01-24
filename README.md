@@ -52,6 +52,14 @@ The configuration file contains the following keys:
     on the public endpoint to this port.
   - `webhooks.secret`: set it to something secret that you will configure on
     your repositories on Github.
+- **Git auth configuration:** set up which auth method to use to clone private
+  repositories
+  - `git.authMethod`: `agent` to use the SSH agent for the user running peon,
+    `key` to use a PEM-format key pair
+  - `git.privateKey`: path to the private key to use
+  - `git.publicKey`: path to the public key to use
+  - `git.keyPassword`: password for the key, use an empty string for unencrypted
+    keys
 - **Logger configuration:**
   - `logger.level`: one of `error`, `info`, `debug`.
 
