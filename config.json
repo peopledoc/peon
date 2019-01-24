@@ -16,6 +16,13 @@
     "secret": "peon-super-secret"
   },
 
+  "git": {
+    "authMethod": "key",
+    "privateKey": "/home/njoyard/.ssh/github_passwordless",
+    "publicKey": "/home/njoyard/.ssh/github_passwordless.pub",
+    "keyPassword": ""
+  },
+
   "workingDirectory": "./data",
   "publicDirectory": "./public",
   "rootURLBase": "/",
