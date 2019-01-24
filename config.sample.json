@@ -4,8 +4,8 @@
     "interval": 5000,
     "repositories": [
       {
-        "url": "git@github.com:peopledoc/ember-peopledoc-ui",
-        "branches": ["peon"]
+        "url": "git@github.com:your-org/your-project",
+        "branches": ["a-specific-branch"]
       }
     ]
   },
