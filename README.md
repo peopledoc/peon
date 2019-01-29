@@ -28,6 +28,8 @@ You can set the `PEON_CONFIG` environment variable to tell peon where to
 look for its configuration file; by default it loads `config.json` at the
 root of the repository.
 
+A sample config file is available at the root of the project. See `config.sample.json` for details.
+
 The configuration file contains the following keys:
 
 - **Base configuration:**
