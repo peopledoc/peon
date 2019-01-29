@@ -1,1 +1,1 @@
-require("./lib/peon")();
+require('./lib/peon')()

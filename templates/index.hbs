@@ -15,28 +15,32 @@
 </style>
 <h1>Peon status</h1>
 
-<h2>Build output</h2>
-<ul>
-  {{#each repos as |repo repoName|}}
-    {{#if repo.builtBranches}}
-      <li>
-        <b>{{repoName}}</b>
-        {{#each repo.builtBranches as |branch|}}
-          <a href="{{repoName}}/{{branch}}">{{branch}}</a>
-        {{/each}}
-      </li>
-    {{/if}}
-  {{/each}}
-</ul>
-
-<h2>Latest builds</h2>
-{{#each repos}}
-  <h3>{{@key}}</h3>
+{{#if hasData}}
+  <h2>Build output</h2>
   <ul>
-    {{#each lastBuilds}}
-      <li><a class="status-{{status}}" href="{{link}}">{{buildId}}</a> on {{branch}}, enqueued at {{date enqueued}}</li>
+    {{#each repos as |repo repoName|}}
+      {{#if repo.builtBranches}}
+        <li>
+          <b>{{repoName}}</b>
+          {{#each repo.builtBranches as |branch|}}
+            <a href="{{repoName}}/{{branch}}">{{branch}}</a>
+          {{/each}}
+        </li>
+      {{/if}}
     {{/each}}
   </ul>
-{{/each}}
+
+  <h2>Latest builds</h2>
+  {{#each repos}}
+    <h3>{{@key}}</h3>
+    <ul>
+      {{#each lastBuilds}}
+        <li><a class="status-{{status}}" href="{{link}}">{{buildId}}</a> on {{branch}}, enqueued at {{date enqueued}}</li>
+      {{/each}}
+    </ul>
+  {{/each}}
+{{else}}
+  No build jobs have run yet!
+{{/if}}
 
 <i>Last updated at {{date now}}</i>
