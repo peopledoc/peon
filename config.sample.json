@@ -23,6 +23,7 @@
     "keyPassword": ""
   },
 
+  "cacheValidity": 2592000000,
   "workingDirectory": "./data",
   "publicDirectory": "./public",
   "rootURLBase": "/",

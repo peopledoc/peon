@@ -37,6 +37,7 @@ The configuration file contains the following keys:
   - `publicDirectory`: a directory where peon will store the build output.
     Peon will create `REPONAME/BRANCHNAME` subdirectories for each build.
   - `rootURLBase`: the URL where the web server serves `publicDirectory`.
+  - `cacheValidity`: validity in milliseconds of paths cached during builds.
 - **Watcher configuration:** enable this when you want peon to poll git
   repositories at regular intervals (useful when the machine is not reachable
   from the internet and thus cannot receive webhooks)
@@ -85,6 +86,12 @@ repository.  This file must have the following content:
 branches:
   - master
   - develop
+
+# List of paths to store in cache after build/restore before build relative to the repository root
+# The 'source' key indicates a file whose fingerprint will be used as a key for the cache
+cache:
+  - path: node_modules
+    source: yarn.lock
 
 # List of commands to run in series to build the app
 commands:
