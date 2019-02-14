@@ -14,7 +14,7 @@ reachable from the internet, can also watch git repositories directly.
 ### Prerequisites
 
 - node 11+ and yarn
-- a web server serving static files from a directory
+- a web server configured to serve static files from a directory
 - when using webhooks, a web server that is able to proxy requests on a
   publicly-accessible URL to a locally-running http server
 
@@ -28,16 +28,18 @@ You can set the `PEON_CONFIG` environment variable to tell peon where to
 look for its configuration file; by default it loads `config.json` at the
 root of the repository.
 
-A sample config file is available at the root of the project. See `config.sample.json` for details.
+A sample config file is available at the root of the project. See
+`config.sample.json` for details.
 
 The configuration file contains the following keys:
 
 - **Base configuration:**
   - `workingDirectory`: a directory where peon stores its working data
-  - `publicDirectory`: a directory where peon will store the build output.
+  - `outputDirectory`: a directory where peon will store build outputs.
     Peon will create `REPONAME/BRANCHNAME` subdirectories for each build.
-  - `rootURLBase`: the URL where the web server serves `publicDirectory`.
+  - `rootURLBase`: the URL path where the web server serves `outputDirectory`.
   - `cacheValidity`: validity in milliseconds of paths cached during builds.
+  - `statusDirectory`: a directory where peon will store its status pages.
 - **Watcher configuration:** enable this when you want peon to poll git
   repositories at regular intervals (useful when the machine is not reachable
   from the internet and thus cannot receive webhooks)
@@ -67,8 +69,11 @@ The configuration file contains the following keys:
   - `logger.level`: one of `error`, `info`, `debug`.
 
 **Notes:**
-- The user running peon must have writing rights on `workingDirectory` and
-  `publicDirectory`.
+- The user running peon must have writing rights on `workingDirectory`,
+  `outputDirectory` and `statusDirectory`.
+- You can setup peon so that both build outputs and status pages are stored in
+  the same directory, but in this case, make sure that `statusDirectory` is a
+  subdirectory of `outputDirectory`.
 - Do not watch a repository that also emits webhooks, it will conflict.
 
 ### Running peon
@@ -82,10 +87,7 @@ Peon will only run builds when it finds a `.peon.yml` file at the root of a
 repository.  This file must have the following content:
 
 ```yaml
-# List of branches where a build is allowed (optional, defaults to allowing all branches)
-branches:
-  - master
-  - develop
+## Mandatory configuration
 
 # List of paths to store in cache after build/restore before build relative to the repository root
 # The 'source' key indicates a file whose fingerprint will be used as a key for the cache
@@ -98,11 +100,21 @@ commands:
   - yarn
   - yarn build -prod
 
-# Where peon can find the result of the build after running build commands
-output: ./dist
+# Build output directory path relative to the repository root; its content will
+# be copied to outputDirectory/REPONAME/BRANCH after a successful build.
+output: dist
 
-# Environment passed to all build commands (optional)
-# $PEON_ROOT_URL and $PEON_BRANCH are replaced when building
+## Optional configuration
+
+# By default Peon will run builds on any branches with a .peon.yml file, use
+# this to restrict builds to specific branches.
+branches:
+  - master
+  - develop
+
+# Environment variables to pass to all build commands.
+# You can include $PEON_ROOT_URL and $PEON_BRANCH tokens in the values, they
+# will be replaced during the build.
 environment:
   ROOT_URL: "$PEON_ROOT_URL"
 ```
