@@ -18,15 +18,26 @@
 
   "git": {
     "authMethod": "key",
-    "privateKey": "/home/njoyard/.ssh/github_passwordless",
-    "publicKey": "/home/njoyard/.ssh/github_passwordless.pub",
-    "keyPassword": ""
+    "privateKey": "/path/to/id_rsa",
+    "publicKey": "/path/to/id_rsa.pub",
+    "keyPassword": "super-secret"
+  },
+
+  "destinations": {
+    "myremote": {
+      "destination": "user@remote:/var/www/html/documentation",
+      "rootUrl": "/documentation/",
+      "shell": "ssh -o StrictHostKeyChecking=no -i /path/to/id_rsa"
+    },
+    "local": {
+      "destination": "/var/www/html/peon-builds",
+      "rootUrl": "/peon-builds/"
+    }
   },
 
   "cacheValidity": 2592000000,
   "workingDirectory": "./data",
-  "publicDirectory": "./public",
-  "rootURLBase": "/",
+  "statusDirectory": "/var/www/html/peon-status",
 
   "logger": {
     "level": "debug"
