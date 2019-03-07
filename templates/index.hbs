@@ -16,14 +16,14 @@
 <h1>Peon status</h1>
 
 {{#if hasData}}
-  <h2>Last successful builds by branch</h2>
+  <h2>Last successful builds</h2>
   <ul>
     {{#each repos as |repo repoName|}}
-      {{#if repo.lastSuccessfulBuildByBranch}}
+      {{#if repo.lastSuccessfulBuildByRef}}
         <li>
           <b>{{repoName}}</b>
-          {{#each repo.lastSuccessfulBuildByBranch as |build|}}
-            <a href="{{build.extra.outputURL}}" target="_blank">{{build.branch}}</a>
+          {{#each repo.lastSuccessfulBuildByRef as |build|}}
+            <a href="{{build.extra.outputURL}}" target="_blank">{{build.branch}}{{build.tag}}</a>
           {{/each}}
         </li>
       {{/if}}
@@ -37,7 +37,7 @@
       {{#each lastBuilds}}
         <li>
           <a class="status-{{status}}" href="{{link}}">{{buildId}}</a>
-          on {{branch}},
+          on {{branch}}{{tag}},
           enqueued at {{date enqueued}}
           {{#if extra.outputURL}}<a href="{{extra.outputURL}}" target="_blank">Build output</a>{{/if}}
         </li>
