@@ -37,6 +37,9 @@ The configuration file contains the following keys:
   - `workingDirectory`: a directory where peon stores its working data
   - `cacheValidity`: validity in milliseconds of paths cached during builds.
   - `statusDirectory`: a directory where peon will store its status pages.
+  - `statusUrl`: URL where the status directory is served (used for github
+    build status updates)
+  - `githubAPIToken`: a GitHub API token used to update build status on commits.
 - **Watcher configuration:** enable this when you want peon to poll git
   repositories at regular intervals (useful when the machine is not reachable
   from the internet and thus cannot receive webhooks)

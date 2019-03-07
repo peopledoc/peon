@@ -40,6 +40,8 @@
   "cacheValidity": 2592000000,
   "workingDirectory": "./data",
   "statusDirectory": "/var/www/html/peon-status",
+  "statusUrl": "https://my.host/peon-status/",
+  "githubAPIToken": "abcdef",
 
   "logger": {
     "level": "debug"

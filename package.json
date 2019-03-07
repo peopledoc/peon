@@ -12,6 +12,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@octokit/rest": "^16.17.0",
     "body-parser": "^1.18.3",
     "child-process-promise": "^2.2.1",
     "eslint-config-peopledoc": "^1.5.0",
@@ -21,8 +22,8 @@
     "handlebars": "^4.0.12",
     "js-yaml": "^3.12.1",
     "nodegit": "^0.24.0",
-    "tar": "^4.4.8",
     "rsync": "^0.6.1",
+    "tar": "^4.4.8",
     "winston": "^3.1.0"
   }
 }
