@@ -35,7 +35,12 @@
     <h3>{{@key}}</h3>
     <ul>
       {{#each lastBuilds}}
-        <li><a class="status-{{status}}" href="{{link}}">{{buildId}}</a> on {{branch}}, enqueued at {{date enqueued}}</li>
+        <li>
+          <a class="status-{{status}}" href="{{link}}">{{buildId}}</a>
+          on {{branch}},
+          enqueued at {{date enqueued}}
+          {{#if extra.outputURL}}<a href="{{extra.outputURL}}" target="_blank">Build output</a>{{/if}}
+        </li>
       {{/each}}
     </ul>
   {{/each}}
