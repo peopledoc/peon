@@ -61,6 +61,9 @@ The configuration file contains the following keys:
     must exist.
   - `destinations.$name.rootUrl`: root URL path  the destination is served by a
     webserver (without the protocol/host/port).
+  - `destinations.$name.absoluteUrl`: full URL the destination is served by a
+    webserver (**with** protocol/host/port).  This is used so that peon can
+    generate links to the deployed build.
   - `destinations.$name.shell`: used only for remote destinations; shell command
     to use to connect to the remote.  You can use it to pass SSH options (for
     example `ssh -o StrictHostKeyChecking=no -i /path/to/id_rsa`).  Note that

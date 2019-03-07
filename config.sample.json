@@ -27,11 +27,13 @@
     "myremote": {
       "destination": "user@remote:/var/www/html/documentation",
       "rootUrl": "/documentation/",
+      "absoluteUrl": "https://my.remote/documentation/",
       "shell": "ssh -o StrictHostKeyChecking=no -i /path/to/id_rsa"
     },
     "local": {
       "destination": "/var/www/html/peon-builds",
-      "rootUrl": "/peon-builds/"
+      "rootUrl": "/peon-builds/",
+      "absoluteUrl": "https://my.host/peon-builds/"
     }
   },
 
