@@ -1,0 +1,13 @@
+#!/bin/bash
+
+echo "output line 1"
+sleep .05 >/dev/null
+echo "output line 2"
+echo "error line" >&2
+sleep .05 >/dev/null
+echo "output line 3"
+
+
+if [ "$1" = "fail" ]; then
+  exit 1
+fi
