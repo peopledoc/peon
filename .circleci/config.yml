@@ -1,0 +1,76 @@
+defaults: &defaults
+  docker:
+    - image: circleci/node:10
+      environment:
+        JOBS: 2
+  working_directory: ~/peon
+
+version: 2
+jobs:
+  checkout_code:
+    <<: *defaults
+    steps:
+      - checkout
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  install_dependencies:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - restore_cache:
+          keys:
+            - peon-node10-v1-{{ checksum "yarn.lock" }}
+      - run:
+          name: Avoid hosts unknown for github
+          command: mkdir ~/.ssh/ && echo -e "Host github.com\n\tStrictHostKeyChecking no\n" > ~/.ssh/config
+      - run:
+          name: Yarn Install
+          command: yarn install --non-interactive
+      - save_cache:
+          key: peon-node10-v1-{{ checksum "yarn.lock" }}
+          paths:
+            - ~/peon/node_modules
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+
+  lint:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Lint
+          command: yarn lint
+
+  test:
+    <<: *defaults
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install rsync
+          command: sudo apt update && sudo apt install rsync
+      - run:
+          name: Run Tests
+          command: yarn test
+
+workflows:
+  version: 2
+  test:
+    jobs:
+      - checkout_code
+      - install_dependencies:
+          requires:
+            - checkout_code
+      - lint:
+          requires:
+            - install_dependencies
+      - test:
+          requires:
+            - install_dependencies

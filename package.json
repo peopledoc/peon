@@ -2,7 +2,8 @@
   "name": "peon",
   "version": "0.1.0",
   "scripts": {
-    "start": "node ./index.js"
+    "test": "PEON_CONFIG=$(pwd)/test/config.json mocha --file 'test/init.js' --recursive 'test/**/*.test.js'",
+    "lint": "eslint index.js lib scripts test"
   },
   "main": "index.js",
   "repository": "git@github.com:peopledoc/peon.git",
@@ -15,7 +16,6 @@
     "@octokit/rest": "^16.17.0",
     "body-parser": "^1.18.3",
     "child-process-promise": "^2.2.1",
-    "eslint-config-peopledoc": "^1.5.0",
     "express": "^4.16.4",
     "express-github-webhook": "^1.0.6",
     "fs-extra": "^7.0.1",
@@ -28,6 +28,10 @@
     "winston": "^3.1.0"
   },
   "devDependencies": {
-    "request": "^2.88.0"
+    "chai": "^4.2.0",
+    "eslint-config-peopledoc": "^1.5.0",
+    "mocha": "^6.0.2",
+    "request": "^2.88.0",
+    "request-promise-native": "^1.0.7"
   }
 }
