@@ -1,5 +1,5 @@
 const { assert } = require('chai')
-const { mkdir, readFile, writeFile } = require('fs-extra')
+const { ensureDir, readFile, writeFile } = require('fs-extra')
 const { resolve } = require('path')
 const { lookup, mock, mockConfig, tempDir } = require('../../helpers')
 const { Renderer } = lookup()
@@ -50,7 +50,7 @@ describe('unit | status/render', function() {
     it('returns last render date from saved JSON file', async function() {
       let renderer = new Renderer()
 
-      await mkdir(resolve(workingDirectory, 'status'))
+      await ensureDir(resolve(workingDirectory, 'status'))
       await writeFile(
         resolve(workingDirectory, 'status', 'peon-status.json'),
         JSON.stringify({ lastRender: 1234 })
@@ -63,7 +63,7 @@ describe('unit | status/render', function() {
     it('does not read JSON file again when last render is already known', async function() {
       let renderer = new Renderer()
 
-      await mkdir(resolve(workingDirectory, 'status'))
+      await ensureDir(resolve(workingDirectory, 'status'))
       await writeFile(
         resolve(workingDirectory, 'status', 'peon-status.json'),
         'invalid json'
@@ -97,7 +97,7 @@ describe('unit | status/render', function() {
     })
 
     it('ignores peon-status.json', async function() {
-      await mkdir(resolve(workingDirectory, 'status'))
+      await ensureDir(resolve(workingDirectory, 'status'))
       await writeFile(
         resolve(workingDirectory, 'status', 'peon-status.json'),
         'invalid json'
@@ -107,7 +107,7 @@ describe('unit | status/render', function() {
     })
 
     it('reads data from repo status files', async function() {
-      await mkdir(resolve(workingDirectory, 'status'))
+      await ensureDir(resolve(workingDirectory, 'status'))
       await writeFile(
         resolve(workingDirectory, 'status', 'repo1.json'),
         JSON.stringify({

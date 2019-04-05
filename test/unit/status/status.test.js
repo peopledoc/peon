@@ -1,5 +1,5 @@
 const { assert } = require('chai')
-const { readFile, writeFile } = require('fs-extra')
+const { ensureDir, readFile, writeFile } = require('fs-extra')
 const { resolve } = require('path')
 const { lookup, mock, mockConfig, tempDir } = require('../../helpers')
 const { Status } = lookup()
@@ -34,7 +34,7 @@ describe('unit | status/status', function() {
 
       let status = new Status()
 
-      await status._ensureDirsExist()
+      await ensureDir(statusRoot)
       await writeFile(
         resolve(statusRoot, 'reponame.json'),
         JSON.stringify({ some: { status: 'content' } })

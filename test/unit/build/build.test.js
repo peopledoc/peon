@@ -1,7 +1,7 @@
 /* eslint-disable camelcase */
 
 const { assert } = require('chai')
-const { mkdir, readFile, stat, writeFile } = require('fs-extra')
+const { ensureDir, readFile, stat, writeFile } = require('fs-extra')
 const yaml = require('js-yaml')
 const { resolve } = require('path')
 const {
@@ -794,7 +794,7 @@ describe('unit | build/build', function() {
       build.peonConfig = { output: 'output' }
       build.workspace = await tempDir()
 
-      await mkdir(resolve(build.workspace, 'output'))
+      await ensureDir(resolve(build.workspace, 'output'))
 
       let rsync = { options: [] }
       mock(
@@ -861,7 +861,7 @@ describe('unit | build/build', function() {
       build.peonConfig = { output: 'output' }
       build.workspace = await tempDir()
 
-      await mkdir(resolve(build.workspace, 'output'))
+      await ensureDir(resolve(build.workspace, 'output'))
       await writeFile(resolve(build.workspace, 'output', 'file'), 'content')
 
       let rsync = { options: [] }
@@ -929,7 +929,7 @@ describe('unit | build/build', function() {
       build.peonConfig = { output: 'output' }
       build.workspace = await tempDir()
 
-      await mkdir(resolve(build.workspace, 'output'))
+      await ensureDir(resolve(build.workspace, 'output'))
 
       mock(
         'Rsync',

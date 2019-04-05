@@ -1,5 +1,5 @@
 const { assert } = require('chai')
-const { mkdir, readdir, utimes, writeFile } = require('fs-extra')
+const { ensureDir, readdir, utimes, writeFile } = require('fs-extra')
 const { resolve } = require('path')
 const crypto = require('crypto')
 const { lookup, mock, mockConfig, tempDir } = require('../../helpers')
@@ -70,7 +70,7 @@ describe('unit | build/cache', function() {
       mockConfig('cacheValidity', validitySeconds * 1000)
 
       let cache = new Cache()
-      await cache._ensureCacheDirExists()
+      await ensureDir(resolve(workingDirectory, 'cache'))
 
       await writeFile(resolve(workingDirectory, 'cache', 'expired'), 'content')
       await utimes(
@@ -114,7 +114,7 @@ describe('unit | build/cache', function() {
     })
 
     it('does nothing when key file does not exist', async function() {
-      await mkdir(resolve(workingDirectory, 'existingpath'))
+      await ensureDir(resolve(workingDirectory, 'existingpath'))
       assert.deepEqual(
         await new Cache().saveCache('myrepo', workingDirectory, [
           {
@@ -135,12 +135,12 @@ describe('unit | build/cache', function() {
 
       await writeFile(resolve(workingDirectory, 'existingkeyfile'), 'key')
 
-      await cache._ensureCacheDirExists()
+      await ensureDir(resolve(workingDirectory, 'cache'))
       await writeFile(
         resolve(workingDirectory, 'cache', `myrepo-existingpath-${sha}.tar`),
         'dummy'
       )
-      await mkdir(resolve(workingDirectory, 'existingpath'))
+      await ensureDir(resolve(workingDirectory, 'existingpath'))
 
       assert.deepEqual(
         await cache.saveCache('myrepo', workingDirectory, [
@@ -169,7 +169,7 @@ describe('unit | build/cache', function() {
         .digest('hex')
 
       await writeFile(resolve(workingDirectory, 'existingkeyfile'), 'key')
-      await mkdir(resolve(workingDirectory, 'existingpath'))
+      await ensureDir(resolve(workingDirectory, 'existingpath'))
 
       assert.deepEqual(
         await cache.saveCache('myrepo', workingDirectory, [
@@ -216,7 +216,7 @@ describe('unit | build/cache', function() {
     })
 
     it('does nothing when key file does not exist', async function() {
-      await mkdir(resolve(workingDirectory, 'existingpath'))
+      await ensureDir(resolve(workingDirectory, 'existingpath'))
       assert.deepEqual(
         await new Cache().restoreCache('myrepo', workingDirectory, [
           {
@@ -233,8 +233,8 @@ describe('unit | build/cache', function() {
 
       await writeFile(resolve(workingDirectory, 'existingkeyfile'), 'key')
 
-      await cache._ensureCacheDirExists()
-      await mkdir(resolve(workingDirectory, 'existingpath'))
+      await ensureDir(resolve(workingDirectory, 'cache'))
+      await ensureDir(resolve(workingDirectory, 'existingpath'))
 
       assert.deepEqual(
         await cache.restoreCache('myrepo', workingDirectory, [
@@ -262,14 +262,14 @@ describe('unit | build/cache', function() {
         .update('key')
         .digest('hex')
 
-      await cache._ensureCacheDirExists()
+      await ensureDir(resolve(workingDirectory, 'cache'))
       await writeFile(
         resolve(workingDirectory, 'cache', `myrepo-existingpath-${sha}.tar`),
         'dummy'
       )
 
       await writeFile(resolve(workingDirectory, 'existingkeyfile'), 'key')
-      await mkdir(resolve(workingDirectory, 'existingpath'))
+      await ensureDir(resolve(workingDirectory, 'existingpath'))
 
       assert.deepEqual(
         await cache.restoreCache('myrepo', workingDirectory, [

@@ -1,5 +1,5 @@
 const { resolve } = require('path')
-const { mkdir, readFile, writeFile } = require('fs-extra')
+const { ensureDir, readFile, writeFile } = require('fs-extra')
 const Git = require('nodegit')
 
 const { mockConfig, src, tempDir, wait } = require('../helpers')
@@ -38,7 +38,7 @@ describe('system | peon', function() {
 
     // Create repository content
 
-    await mkdir(repoPath)
+    await ensureDir(repoPath)
     await writeFile(
       resolve(repoPath, 'build.sh'),
       [
