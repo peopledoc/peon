@@ -206,5 +206,39 @@ describe('unit | build/dispatcher', function() {
       await queuedFunction()
       assert.ok(buildCalled)
     })
+
+    it('enqueues a cleanup job when the payload has no head_commit', async function() {
+      let cleanupArgs, queuedFunction
+
+      mock(
+        'Queue',
+        class Queue {
+          run(fun) {
+            queuedFunction = fun
+          }
+        }
+      )
+
+      mock('cleanup', {
+        cleanup() {
+          cleanupArgs = [...arguments]
+        }
+      })
+
+      let repoConfig = {
+        name: 'repo',
+        url: 'git@example.com:org/repo',
+        refMode: 'branch',
+        ref: 'mybranch'
+      }
+
+      let dispatcher = new Dispatcher()
+      dispatcher.findRepository = () => repoConfig
+
+      await dispatcher.dispatch('push', { head_commit: null })
+      assert.ok(queuedFunction)
+      await queuedFunction()
+      assert.deepEqual(cleanupArgs, ['repo', 'branch', 'mybranch'])
+    })
   })
 })

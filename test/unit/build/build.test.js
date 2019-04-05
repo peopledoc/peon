@@ -783,8 +783,12 @@ describe('unit | build/build', function() {
       }
     })
 
-    it('deploys locally, creating intermediate directories', async function() {
-      let build = new Build('ID', { head_commit: { id: 'sha' } }, {})
+    it('deploys locally, creating intermediate directories, and registers cleanup', async function() {
+      let build = new Build(
+        'ID',
+        { head_commit: { id: 'sha' } },
+        { name: 'reponame', refMode: 'refMode', ref: 'ref' }
+      )
 
       build.env = new Environment({ VAR: 'from_env' })
       build.destination = {
@@ -826,6 +830,13 @@ describe('unit | build/build', function() {
         }
       )
 
+      let cleanupArgs
+      mock('cleanup', {
+        registerForCleanup() {
+          cleanupArgs = [...arguments]
+        }
+      })
+
       await build._deploy()
 
       assert.ok(
@@ -843,9 +854,18 @@ describe('unit | build/build', function() {
         )}/`,
         executed: true
       })
+
+      assert.deepEqual(cleanupArgs, [
+        'reponame',
+        'refMode',
+        'ref',
+        'ID',
+        build.destination.destination,
+        'path/in/destination/from_env'
+      ])
     })
 
-    it('deploys remotely, moving output to create intermediate directories', async function() {
+    it('deploys remotely, moving output to create intermediate directories, and does not register cleanup', async function() {
       let build = new Build(
         'ID',
         { head_commit: { id: 'sha' } },
@@ -902,8 +922,16 @@ describe('unit | build/build', function() {
         }
       )
 
+      let cleanupCalled = false
+      mock('cleanup', {
+        registerForCleanup() {
+          cleanupCalled = true
+        }
+      })
+
       await build._deploy()
 
+      assert.notOk(cleanupCalled)
       assert.ok(outputMoved)
 
       let { src } = rsync

@@ -25,7 +25,13 @@ Building SHA {{sha}} on {{branch}}{{tag}}<br>
 Enqueued at {{date enqueued}}<br>
 {{#if start}}Started at {{date start}}<br>{{/if}}
 {{#if end}}Finished at {{date end}}<br>{{/if}}
-{{#if extra.outputURL}}<a href="{{extra.outputURL}}" target="_blank">Link to deployed build output</a><br>{{/if}}
+{{#if extra.outputURL}}
+  {{#if cleaned}}
+    <i>Deployed build output was cleaned up because {{branch}}{{tag}} was removed from the repository</i><br>
+  {{else}}
+    <a href="{{extra.outputURL}}" target="_blank">Link to deployed build output</a><br>
+  {{/if}}
+{{/if}}
 
 {{#each steps}}
   <h2 class="status-{{status}}">{{description}} <span class="duration">({{duration}} ms)</span></h2>

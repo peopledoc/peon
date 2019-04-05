@@ -91,6 +91,9 @@ The configuration file contains the following keys:
 - The user running peon must have writing rights on `workingDirectory` and
   `statusDirectory`.
 - Do not watch a repository that also emits webhooks, it will conflict.
+- When using webhooks, Peon will clean up local builds when receiving a push
+  event for a removed branch or tag.  Peon will not clean up remotely deployed
+  builds, and the watcher is not able to detect removed branches or tags.
 
 ### Running Peon
 
