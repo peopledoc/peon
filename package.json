@@ -2,6 +2,7 @@
   "name": "peon",
   "version": "0.1.0",
   "scripts": {
+    "start": "node ./index.js",
     "test": "PEON_CONFIG=$(pwd)/test/config.json mocha --file 'test/init.js' --recursive 'test/**/*.test.js'",
     "lint": "eslint index.js lib scripts test"
   },
