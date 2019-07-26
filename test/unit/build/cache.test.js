@@ -93,6 +93,31 @@ describe('unit | build/cache', function() {
         'valid2'
       ])
     })
+
+    it('removes non expired entries when cache size is too big', async function() {
+      let validitySeconds = 60
+      let validUnixTime = Date.now() / 1000 - validitySeconds / 2
+
+      mockConfig('cacheValidity', validitySeconds * 1000)
+      mockConfig('cacheMaxSize', 10)
+
+      let cache = new Cache()
+      await cache._ensureCacheDirExists()
+
+      await writeFile(resolve(workingDirectory, 'cache', 'valid1'), 'content')
+      await utimes(
+        resolve(workingDirectory, 'cache', 'valid1'),
+        validUnixTime,
+        validUnixTime
+      )
+      await writeFile(resolve(workingDirectory, 'cache', 'valid2'), 'content')
+
+      await cache._pruneCache()
+
+      assert.deepEqual(await readdir(resolve(workingDirectory, 'cache')), [
+        'valid2'
+      ])
+    })
   })
 
   describe('Cache.saveCache', function() {
