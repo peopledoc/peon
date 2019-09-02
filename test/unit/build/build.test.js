@@ -788,7 +788,8 @@ describe('unit | build/build', function() {
 
       build.env = new Environment({ VAR: 'from_env' })
       build.destination = {
-        destination: await tempDir()
+        destination: await tempDir(),
+        absoluteUrl: 'http://example.com/path/to/dest'
       }
       build.pathInDestination = 'path/in/destination/$VAR'
       build.peonConfig = { output: 'output' }
@@ -826,7 +827,16 @@ describe('unit | build/build', function() {
         }
       )
 
-      await build._deploy()
+      let ret = await build._deploy()
+
+      assert.deepEqual(ret, {
+        localDirectory: `${resolve(
+          build.destination.destination,
+          'path/in/destination/from_env'
+        )}/`,
+        outputURL:
+          'http://example.com/path/to/dest/path/in/destination/from_env'
+      })
 
       assert.ok(
         (await stat(
@@ -855,6 +865,7 @@ describe('unit | build/build', function() {
       build.env = new Environment({ VAR: 'from_env' })
       build.destination = {
         destination: 'user@host:path/to/dest',
+        absoluteUrl: 'http://example.com/path/to/dest',
         shell: 'someshell'
       }
       build.pathInDestination = 'path/in/destination/$VAR'
@@ -902,7 +913,13 @@ describe('unit | build/build', function() {
         }
       )
 
-      await build._deploy()
+      let ret = await build._deploy()
+
+      assert.deepEqual(ret, {
+        localDirectory: null,
+        outputURL:
+          'http://example.com/path/to/dest/path/in/destination/from_env'
+      })
 
       assert.ok(outputMoved)
 
@@ -979,7 +996,9 @@ describe('unit | build/build', function() {
       build.pathInDestination = 'path/$VAR'
 
       build._runStep = function(_, step) {
-        log.push({ what: 'step', step: step() })
+        let ret = step()
+        log.push({ what: 'step', step: ret })
+        return `return value from step "${ret}"`
       }
       build._updateRepository = fail
         ? () => {
@@ -1016,11 +1035,7 @@ describe('unit | build/build', function() {
         { what: 'step', step: 'deploy' },
         {
           what: 'finish',
-          args: [
-            'ID',
-            'success',
-            { outputURL: 'https://example.com/url/path/value' }
-          ]
+          args: ['ID', 'success', 'return value from step "deploy"']
         }
       ])
     })

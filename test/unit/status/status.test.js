@@ -1,5 +1,5 @@
 const { assert } = require('chai')
-const { readFile, writeFile } = require('fs-extra')
+const { pathExists, readFile, writeFile } = require('fs-extra')
 const { resolve } = require('path')
 const { lookup, mock, mockConfig, tempDir } = require('../../helpers')
 const { Status } = lookup()
@@ -529,6 +529,81 @@ describe('unit | status/status', function() {
       assert.equal(build.updated, now)
       assert.equal(build.duration, 1000)
       assert.equal(build.extra, 'some extra info')
+    })
+  })
+
+  describe('Status.cleanupLocalBuilds', function() {
+    it('removes local directory and sets localCleaned extra flag on matching builds', async function() {
+      let repoStatus = {
+        builds: {
+          nonmatching1: {
+            branch: 'otherbranch',
+            status: 'success',
+            extra: {
+              localDirectory: await tempDir()
+            }
+          },
+          nonmatching2: {
+            branch: 'mybranch',
+            status: 'pending',
+            extra: {
+              localDirectory: await tempDir()
+            }
+          },
+          nonmatching3: {
+            branch: 'mybranch',
+            status: 'success',
+            extra: {
+              localDirectory: await tempDir(),
+              localCleaned: true
+            }
+          },
+          matching1: {
+            branch: 'mybranch',
+            status: 'success',
+            extra: {
+              localDirectory: await tempDir()
+            }
+          },
+          matching2: {
+            branch: 'mybranch',
+            status: 'success',
+            extra: {}
+          }
+        }
+      }
+
+      repoStatus.builds.matching2.extra.localDirectory
+        = repoStatus.builds.matching1.extra.localDirectory
+
+      let updater
+      let status = new Status()
+      status._updateRepoStatus = (_, u) => (updater = u)
+
+      await status.cleanupLocalBuilds('myrepo', 'branch', 'mybranch')
+      assert.ok(updater)
+
+      await updater(repoStatus)
+
+      assert.notOk(repoStatus.builds.nonmatching1.extra.localCleaned)
+      assert.notOk(repoStatus.builds.nonmatching2.extra.localCleaned)
+
+      assert.ok(repoStatus.builds.matching1.extra.localCleaned)
+      assert.ok(repoStatus.builds.matching2.extra.localCleaned)
+
+      assert.ok(
+        await pathExists(repoStatus.builds.nonmatching1.extra.localDirectory)
+      )
+      assert.ok(
+        await pathExists(repoStatus.builds.nonmatching2.extra.localDirectory)
+      )
+      assert.ok(
+        await pathExists(repoStatus.builds.nonmatching3.extra.localDirectory)
+      )
+
+      assert.notOk(
+        await pathExists(repoStatus.builds.matching1.extra.localDirectory)
+      )
     })
   })
 })

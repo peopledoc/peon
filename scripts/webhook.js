@@ -8,12 +8,12 @@
 
   Call this script as:
 
-    ./scripts/webhooks.js URL REF SHA
+    ./scripts/webhooks.js URL REF [SHA]
 
   Where:
     URL is the repository URL
     REF is a full git ref (refs/heads/mybranch or refs/tags/mytag)
-    SHA is a commit SHA.
+    SHA is a commit SHA; if omitted, the payload will simulate a deleted branch
 
   Note: this does not generate full payloads, only the parts that peon cares
   about.  It must be updated when peon has new expectations.
@@ -27,15 +27,15 @@ const {
   webhooks: { port, secret }
 } = require('../lib/config')
 
-if (process.argv.length !== 5) {
+if (process.argv.length < 4 || process.argv.length > 5) {
   // eslint-disable-next-line no-console
-  console.error(`Usage: ${process.argv[1]} URL REF SHA`)
+  console.error(`Usage: ${process.argv[1]} URL REF [SHA]`)
   process.exit(1)
 }
 
 const payload = {
   ref: process.argv[3],
-  head_commit: { id: process.argv[4] },
+  head_commit: process.argv[4] && { id: process.argv[4] },
   repository: {
     name: extractRepoName(process.argv[2]),
     ssh_url: process.argv[2]

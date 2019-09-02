@@ -148,7 +148,7 @@ describe('unit | build/dispatcher', function() {
       assert.notOk(startBuildCalled)
     })
 
-    it('starts a build and enqueues it when findRepository returns stuff', async function() {
+    it('starts a build and enqueues it when findRepository returns stuff and payload has a head_commit', async function() {
       let buildCtorArgs, buildCalled, startBuildArgs, queuedFunction
 
       mock(
@@ -205,6 +205,43 @@ describe('unit | build/dispatcher', function() {
       assert.ok(queuedFunction)
       await queuedFunction()
       assert.ok(buildCalled)
+    })
+
+    it('starts a cleanup job and enqueues it when findRepository returns stuff and payload has no head_commit', async function() {
+      let cleanupArgs, queuedFunction
+
+      mock('status', {
+        cleanupLocalBuilds() {
+          cleanupArgs = [...arguments]
+        }
+      })
+
+      mock(
+        'Queue',
+        class Queue {
+          run(fun) {
+            queuedFunction = fun
+          }
+        }
+      )
+
+      let repoConfig = {
+        name: 'repo',
+        url: 'git@example.com:org/repo',
+        refMode: 'branch',
+        ref: 'mybranch'
+      }
+
+      let payload = { head_commit: null }
+
+      let dispatcher = new Dispatcher()
+      dispatcher.findRepository = () => repoConfig
+
+      await dispatcher.dispatch('push', payload)
+
+      assert.ok(queuedFunction)
+      await queuedFunction()
+      assert.deepEqual(cleanupArgs, ['repo', 'branch', 'mybranch'])
     })
   })
 })
