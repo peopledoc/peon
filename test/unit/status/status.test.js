@@ -448,7 +448,7 @@ describe('unit | status/status', function() {
       ])
     })
 
-    it('sends a "failed" github status update when build status is failed', async function() {
+    it('sends a "failure" github status update when build status is failed', async function() {
       let updater, ghArgs
 
       let status = new Status()
@@ -471,12 +471,12 @@ describe('unit | status/status', function() {
         'repo/url',
         'reponame#100',
         'sha',
-        'failed',
+        'failure',
         'Peon build has failed'
       ])
     })
 
-    it('sends a "failed" github status update when build status is cancelled', async function() {
+    it('sends a "failure" github status update when build status is cancelled', async function() {
       let updater, ghArgs
 
       let status = new Status()
@@ -499,7 +499,7 @@ describe('unit | status/status', function() {
         'repo/url',
         'reponame#100',
         'sha',
-        'failed',
+        'failure',
         'Peon build was cancelled'
       ])
     })
