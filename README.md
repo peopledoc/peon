@@ -36,6 +36,9 @@ The configuration file contains the following keys:
 - **Base configuration:**
   - `workingDirectory`: a directory where peon stores its working data
   - `cacheValidity`: validity in milliseconds of paths cached during builds.
+  - `cacheMaxSize`: maximum size of cache in bytes; peon will remove the oldest
+    non-expired cache items until cache size is below that limit. Set to 0 for
+    unlimited cache size.
   - `statusDirectory`: a directory where peon will store its status pages.
   - `statusUrl`: URL where the status directory is served (used for github
     build status updates)
