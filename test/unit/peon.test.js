@@ -1,10 +1,37 @@
 /* eslint-disable camelcase */
 
 const { assert } = require('chai')
-const { src, mock, mockConfig } = require('../helpers')
+const { src, mock, mockConfig, tempDir } = require('../helpers')
 const Peon = require(`${src}/peon`)
 
 describe('unit | peon', function() {
+  beforeEach(async() => {
+    let workingDirectory = await tempDir()
+    mockConfig('workingDirectory', workingDirectory)
+  })
+
+  describe('status', function() {
+    it('aborts stale builds on startup', async function() {
+      let aborted = false
+
+      mock('status', {
+        async abortStaleBuilds() {
+          aborted = true
+        }
+      })
+
+      mockConfig('watcher', {
+        enabled: false
+      })
+
+      mockConfig('webhooks', { enabled: false })
+
+      await new Peon().start()
+
+      assert.ok(aborted)
+    })
+  })
+
   describe('watchers', function() {
     it('starts a watcher for each configured repository', async function() {
       let watchers = []
