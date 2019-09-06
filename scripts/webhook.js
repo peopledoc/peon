@@ -8,12 +8,12 @@
 
   Call this script as:
 
-    ./scripts/webhooks.js URL REF SHA
+    ./scripts/webhooks.js URL REF [SHA]
 
   Where:
     URL is the repository URL
     REF is a full git ref (refs/heads/mybranch or refs/tags/mytag)
-    SHA is a commit SHA.
+    SHA is a commit SHA; if omitted the script will simulate a deleted ref
 
   Note: this does not generate full payloads, only the parts that peon cares
   about.  It must be updated when peon has new expectations.
@@ -22,20 +22,27 @@
 
 const request = require('request')
 const crypto = require('crypto')
-const { extractRepoName } = require('../lib/utils/misc')
-const {
-  webhooks: { port, secret }
-} = require('../lib/config')
 
-if (process.argv.length !== 5) {
+require('../lib/utils/misc')
+require('../lib/utils/config')
+const { lookup } = require('../lib/injections')
+
+const {
+  config: {
+    webhooks: { port, secret }
+  },
+  misc: { extractRepoName }
+} = lookup()
+
+if (process.argv.length < 4 || process.argv.length > 5) {
   // eslint-disable-next-line no-console
-  console.error(`Usage: ${process.argv[1]} URL REF SHA`)
+  console.error(`Usage: ${process.argv[1]} URL REF [SHA]`)
   process.exit(1)
 }
 
 const payload = {
   ref: process.argv[3],
-  head_commit: { id: process.argv[4] },
+  head_commit: process.argv[4] && { id: process.argv[4] },
   repository: {
     name: extractRepoName(process.argv[2]),
     ssh_url: process.argv[2]

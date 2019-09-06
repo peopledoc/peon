@@ -330,6 +330,43 @@ describe('unit | status/status', function() {
       ])
     })
 
+    it('updates an existing step without changing output when output is undefined', async function() {
+      let updater
+      let status = new Status()
+      status._updateRepoStatus = (_, u) => (updater = u)
+
+      await status.updateBuildStep('reponame#100', 'my step', 'some new status')
+
+      let now = Date.now()
+      let before = now - 1000
+      let build = {
+        url: 'repo/url',
+        steps: [
+          {
+            description: 'my step',
+            start: before,
+            status: 'some status',
+            output: 'some output'
+          }
+        ],
+        start: before
+      }
+      let repoStatus = {
+        nextBuildNum: 100,
+        builds: { 'reponame#100': build }
+      }
+      updater(repoStatus, now)
+
+      assert.deepEqual(build.steps, [
+        {
+          description: 'my step',
+          start: before,
+          status: 'some new status',
+          output: 'some output'
+        }
+      ])
+    })
+
     it('sets step end and duration when step status is "success"', async function() {
       let updater
       let status = new Status()

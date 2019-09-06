@@ -238,6 +238,88 @@ tags:
 
 *Note:* you can only trigger builds on tags from webhooks, not from the watcher.
 
+## Development and testing
+
+Below is a config file suitable for local testing.  It stores working files in a
+`data` directory in the repository root, and status pages and build outputs to a
+`public` directory in the repository root (those will be created automatically).
+
+It only has a local destination. If you want to serve builds and status files
+locally, you can use `serve` (`npm -g serve; serve` from the repository root)
+and the URLs in the config file will match.
+
+```json
+{
+  "watcher": {
+    "enabled": false,
+    "interval": 5000,
+    "repositories": []
+  },
+
+  "webhooks": {
+    "enabled": true,
+    "port": 1234,
+    "secret": "MYSECRET"
+  },
+
+  "git": {
+    "authMethod": "agent"
+  },
+
+  "destinations": {
+    "local": {
+      "destination": "public/builds",
+      "absoluteUrl": "http://localhost:5000/builds/",
+      "rootUrl": "/builds/"
+    }
+  },
+
+  "cacheValidity": 1000000000,
+  "cacheMaxSize": 1000000000,
+  "workingDirectory": "data",
+  "statusDirectory": "public/peon",
+  "statusUrl": "http://localhost:5000/peon/",
+  "githubAPIToken": "MYTOKEN",
+
+  "logger": {
+    "level": "debug",
+    "status": "info"
+  }
+}
+```
+
+You will probably want to create a test repository on GitHub.  If you want to
+test github commit status updates, you will also need an API token (create one
+from [here](https://github.com/settings/tokens) with the `repo:status` scope,
+and put it as `githubAPIToken` in the config file).
+
+You can create a dummy peon config file as follows in your repository (builds
+will only have an empty index file, but whatever).
+
+```yaml
+# .peon.yml
+output: dist
+commands:
+  - mkdir dist
+  - touch dist/index.html
+destinations:
+  - name: local
+```
+
+You will not be able to test webhooks direclty (mostly because you don't want to
+have your dev server be reachable from the internet, and it won't be reachable
+by github either then).  Fortunately, there is a handy helper script for that.
+When peon is started, run the following command to simulate a PUSH webhook:
+
+```sh
+scripts/webhook.js git@github.com:MYUSER/MYREPO.git refs/heads/MYBRANCH MYCOMMITSHA
+```
+
+If you omit a SHA, it will simulate a deleted branch.  You should use an actual
+SHA and branch from your repo.  The script will read the peon config file and
+use the port and secret from therein, so that it can generate a correctly signed
+payload and reach peon.
+
 # License
 
 © 2019 Nicolas Joyard, Xavier Cambar for PeopleDoc

@@ -30,7 +30,13 @@ Building SHA {{sha}} on {{branch}}{{tag}}<br>
 Enqueued at {{date enqueued}}<br>
 {{#if start}}Started at {{date start}}<br>{{/if}}
 {{#if end}}Finished at {{date end}}<br>{{/if}}
-{{#if extra.outputURL}}<a href="{{extra.outputURL}}" target="_blank">Link to deployed build output</a><br>{{/if}}
+{{#if extra.localCleaned}}
+  Build output was cleaned because {{branch}}{{tag}} was removed.<br>
+{{else}}
+  {{#if extra.outputURL}}
+    <a href="{{extra.outputURL}}" target="_blank">Link to deployed build output</a><br>
+  {{/if}}
+{{/if}}
 
 {{#each steps}}
   <h2 class="status-{{status}}">{{description}} <span class="duration">({{time duration}})</span></h2>
