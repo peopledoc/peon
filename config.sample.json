@@ -38,6 +38,7 @@
   },
 
   "cacheValidity": 2592000000,
+  "cacheMaxSize": 0,
   "workingDirectory": "./data",
   "statusDirectory": "/var/www/html/peon-status",
   "statusUrl": "https://my.host/peon-status/",

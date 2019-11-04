@@ -448,7 +448,7 @@ describe('unit | status/status', function() {
       ])
     })
 
-    it('sends a "failed" github status update when build status is failed', async function() {
+    it('sends a "failure" github status update when build status is failed', async function() {
       let updater, ghArgs
 
       let status = new Status()
@@ -471,12 +471,12 @@ describe('unit | status/status', function() {
         'repo/url',
         'reponame#100',
         'sha',
-        'failed',
+        'failure',
         'Peon build has failed'
       ])
     })
 
-    it('sends a "failed" github status update when build status is cancelled', async function() {
+    it('sends a "failure" github status update when build status is cancelled', async function() {
       let updater, ghArgs
 
       let status = new Status()
@@ -499,7 +499,7 @@ describe('unit | status/status', function() {
         'repo/url',
         'reponame#100',
         'sha',
-        'failed',
+        'failure',
         'Peon build was cancelled'
       ])
     })
@@ -529,6 +529,102 @@ describe('unit | status/status', function() {
       assert.equal(build.updated, now)
       assert.equal(build.duration, 1000)
       assert.equal(build.extra, 'some extra info')
+    })
+  })
+
+  describe('Status.abortStaleBuilds', function() {
+    it('aborts stale builds', async function() {
+      let status = new Status()
+      let rendered = false
+      let updates = []
+
+      mock('renderer', {
+        async render() {
+          rendered = true
+        }
+      })
+
+      mock('githubStatus', {
+        async update() {
+          updates.push([...arguments])
+        }
+      })
+
+      await status._ensureDirsExist()
+      await writeFile(
+        resolve(statusRoot, 'reponame.json'),
+        JSON.stringify({
+          builds: {
+            mybuild1: {
+              status: 'pending',
+              url: 'myurl',
+              sha: 'sha1',
+              steps: []
+            },
+            mybuild2: {
+              status: 'running',
+              url: 'myurl',
+              sha: 'sha2',
+              steps: [{ status: 'success' }, { status: 'running' }]
+            },
+            mybuild3: {
+              status: 'success',
+              url: 'myurl',
+              sha: 'sha3',
+              steps: [{ status: 'success' }]
+            }
+          }
+        })
+      )
+
+      await status.abortStaleBuilds()
+
+      let {
+        builds: { mybuild1, mybuild2, mybuild3 }
+      } = JSON.parse(await readFile(resolve(statusRoot, 'reponame.json')))
+
+      assert.equal(mybuild1.status, 'cancelled')
+      assert.equal(mybuild2.status, 'cancelled')
+      assert.equal(mybuild2.steps[1].status, 'failed')
+      assert.equal(mybuild2.steps[1].output, 'stale build was aborted')
+      assert.equal(mybuild3.status, 'success')
+
+      assert.deepEqual(updates, [
+        ['myurl', 'mybuild1', 'sha1', 'error', 'Peon stale build was aborted'],
+        ['myurl', 'mybuild2', 'sha2', 'error', 'Peon stale build was aborted']
+      ])
+
+      assert.ok(rendered)
+    })
+
+    it('does not rerender when nothing was aborted', async function() {
+      let status = new Status()
+      let rendered = false
+
+      mock('renderer', {
+        async render() {
+          rendered = true
+        }
+      })
+
+      await status._ensureDirsExist()
+      await writeFile(
+        resolve(statusRoot, 'reponame.json'),
+        JSON.stringify({
+          builds: {
+            mybuild: {
+              status: 'success',
+              url: 'myurl',
+              sha: 'sha',
+              steps: [{ status: 'success' }]
+            }
+          }
+        })
+      )
+
+      await status.abortStaleBuilds()
+
+      assert.notOk(rendered)
     })
   })
 })
