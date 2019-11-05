@@ -1,7 +1,9 @@
 <title>Status page - Peon</title>
 <meta http-equiv="refresh" content="5">
 <style>
-  .status-pending, .status-running, .status-cancelled {
+  .status-pending,
+  .status-running,
+  .status-cancelled {
     background-color: #ddd;
   }
 
@@ -13,39 +15,82 @@
     background-color: #fdd;
   }
 </style>
-<h1>Peon status</h1>
+<h1>Peon status page</h1>
 
 {{#if hasData}}
-  <h2>Last successful builds</h2>
-  <ul>
-    {{#each repos as |repo repoName|}}
-      {{#if repo.lastSuccessfulBuildByRef}}
-        <li>
-          <b>{{repoName}}</b>
-          {{#each repo.lastSuccessfulBuildByRef as |build|}}
-            <a href="{{build.extra.outputURL}}" target="_blank">{{build.branch}}{{build.tag}}</a>
-          {{/each}}
-        </li>
-      {{/if}}
-    {{/each}}
-  </ul>
+  <h2>Last 100 builds</h2>
 
-  <h2>Latest builds</h2>
-  {{#each repos}}
-    <h3>{{@key}}</h3>
-    <ul>
-      {{#each lastBuilds}}
-        <li>
-          <a class="status-{{status}}" href="{{link}}">{{buildId}}</a>
-          on {{branch}}{{tag}},
-          enqueued at {{date enqueued}}
-          {{#if extra.outputURL}}<a href="{{extra.outputURL}}" target="_blank">Build output</a>{{/if}}
-        </li>
-      {{/each}}
-    </ul>
-  {{/each}}
+  <table width="100%">
+    <tr>
+      <th>
+        Repository
+      </th>
+      <th>
+        Build
+      </th>
+      <th colspan="2">
+        Ref
+      </th>
+      <th>
+        Enqueued
+      </th>
+      <th>
+        Time in queue
+      </th>
+      <th>
+        Job duration
+      </th>
+      <th>
+        Status
+      </th>
+      <th>
+        Output
+      </th>
+    </tr>
+    {{#each builds}}
+      <tr class="status-{{status}}">
+        <td>
+          <a href="{{repoLink}}">{{repoName}}</a>
+        </td>
+        <td>
+          <a href="{{link}}">{{buildNum}}</a>
+        </td>
+        <td>
+          {{refMode}}
+        </td>
+        <td>
+          {{ref}}
+        </td>
+        <td>
+          {{date enqueued}}
+        </td>
+        <td>
+          {{#if start}}
+            {{time queueTime}}
+          {{else}}
+            &ndash;
+          {{/if}}
+        </td>
+        <td>
+          {{#if end}}
+            {{time runTime}}
+          {{else}}
+            &ndash;
+          {{/if}}
+        </td>
+        <td>
+          {{status}}
+        </td>
+        <td>
+          {{#if extra.outputURL}}
+            <a href="{{extra.outputURL}}" target="_blank">Build output</a>
+          {{/if}}
+        </td>
+      </tr>
+    {{/each}}
+  </table>
 {{else}}
-  No build jobs have run yet!
+  No builds have run yet, nothing to report.
 {{/if}}
 
 <i>Last updated at {{date now}}</i>

@@ -1,9 +1,11 @@
 <title>{{buildId}} - Peon</title>
 {{#if isRunning}}
-<meta http-equiv="refresh" content="5">
+  <meta http-equiv="refresh" content="5">
 {{/if}}
 <style>
-  .status-pending, .status-running, .status-cancelled {
+  .status-pending,
+  .status-running,
+  .status-cancelled {
     background-color: #ddd;
   }
 
@@ -19,7 +21,10 @@
     background-color: #fdd;
   }
 </style>
-<h1 class="status-{{status}}">Build {{buildId}} <span class="duration">({{duration}} ms)</span></h1>
+
+<h1 class="status-{{status}}">Build {{buildId}} <span class="duration">({{time duration}})</span></h1>
+<a href="../{{repoName}}.html">View all builds for {{repoName}}</a> &ndash;
+<a href="../index.html">Peon status page</a><br><br>
 
 Building SHA {{sha}} on {{branch}}{{tag}}<br>
 Enqueued at {{date enqueued}}<br>
@@ -28,7 +33,7 @@ Enqueued at {{date enqueued}}<br>
 {{#if extra.outputURL}}<a href="{{extra.outputURL}}" target="_blank">Link to deployed build output</a><br>{{/if}}
 
 {{#each steps}}
-  <h2 class="status-{{status}}">{{description}} <span class="duration">({{duration}} ms)</span></h2>
+  <h2 class="status-{{status}}">{{description}} <span class="duration">({{time duration}})</span></h2>
   {{#if output}}
     <pre>{{output}}</pre>
   {{/if}}
