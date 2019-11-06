@@ -158,11 +158,20 @@ describe('unit | status/render', function() {
 
       await renderer._renderBuild('repo#100', {
         updated: 2000,
-        data: 'some build data'
+        data: 'some build data',
+        tag: 'mytag'
       })
 
       assert.deepEqual(templateData, {
         buildId: 'repo#100',
+        buildNum: '100',
+        link: 'repo/100.html',
+        ref: 'mytag',
+        tag: 'mytag',
+        refMode: 'tag',
+        repoName: 'repo',
+        queueTime: null,
+        runTime: null,
         updated: 2000,
         data: 'some build data',
         isRunning: false
@@ -261,23 +270,89 @@ describe('unit | status/render', function() {
   })
 
   describe('Renderer._renderRepo', function() {
-    it('calls _renderBuild for each build', async function() {
+    let statusDirectory
+
+    beforeEach(async function() {
+      statusDirectory = await tempDir()
+      mockConfig('statusDirectory', statusDirectory)
+    })
+
+    it('calls _renderBuild for each build and renders repo page', async function() {
       let log = []
       let renderer = new Renderer()
+      let templateData
+
       renderer._renderBuild = function() {
         log.push([...arguments])
       }
 
-      await renderer._renderRepo({
+      renderer.repoTemplate = function(data) {
+        templateData = data
+        return 'rendered template'
+      }
+
+      let now = Date.now()
+      let earlier = now - 1000
+
+      await renderer._renderRepo(now, 'repo', {
         builds: {
-          'repo#1': { data: 'build 1 data' },
-          'repo#2': { data: 'build 2 data' }
+          'repo#1': {
+            data: 'build 1 data',
+            branch: 'mybranch',
+            updated: earlier
+          },
+          'repo#2': {
+            data: 'build 2 data',
+            tag: 'mytag',
+            updated: earlier
+          }
         }
       })
 
+      assert.deepEqual(templateData, {
+        builds: [
+          {
+            buildId: 'repo#2',
+            buildNum: '2',
+            data: 'build 2 data',
+            link: 'repo/2.html',
+            queueTime: null,
+            ref: 'mytag',
+            refMode: 'tag',
+            tag: 'mytag',
+            repoName: 'repo',
+            runTime: null,
+            updated: earlier
+          },
+          {
+            buildId: 'repo#1',
+            buildNum: '1',
+            data: 'build 1 data',
+            link: 'repo/1.html',
+            queueTime: null,
+            ref: 'mybranch',
+            refMode: 'branch',
+            branch: 'mybranch',
+            repoName: 'repo',
+            runTime: null,
+            updated: earlier
+          }
+        ],
+        now,
+        repoName: 'repo'
+      })
+
+      assert.equal(
+        await readFile(resolve(statusDirectory, 'repo.html')),
+        'rendered template'
+      )
+
       assert.deepEqual(log, [
-        ['repo#1', { data: 'build 1 data' }],
-        ['repo#2', { data: 'build 2 data' }]
+        [
+          'repo#1',
+          { data: 'build 1 data', branch: 'mybranch', updated: earlier }
+        ],
+        ['repo#2', { data: 'build 2 data', tag: 'mytag', updated: earlier }]
       ])
     })
   })
@@ -311,7 +386,7 @@ describe('unit | status/render', function() {
         templateData = data
       }
 
-      await renderer._renderIndex(1, {})
+      await renderer._renderIndex(1, { repo: { builds: {} } })
 
       assert.notOk(templateData.hasData)
     })
@@ -323,7 +398,7 @@ describe('unit | status/render', function() {
         templateData = data
       }
 
-      await renderer._renderIndex(1, { repo: { builds: {} } })
+      await renderer._renderIndex(1, { repo: { builds: { 'repo#1': {} } } })
 
       assert.ok(templateData.hasData)
     })
@@ -340,78 +415,44 @@ describe('unit | status/render', function() {
       assert.equal(templateData.now, 1234)
     })
 
-    it('passes last 5 builds for each repository', async function() {
+    it('passes last builds', async function() {
       let renderer = new Renderer()
       let templateData
       renderer.indexTemplate = function(data) {
         templateData = data
       }
+      renderer.indexBuildCount = 5
 
       await renderer._renderIndex(1, {
         repoA: {
           builds: {
-            'repoA#1': { status: 'success' },
-            'repoA#2': { status: 'success' },
-            'repoA#3': { status: 'success' },
-            'repoA#4': { status: 'failed' },
-            'repoA#5': { status: 'success' },
-            'repoA#6': { status: 'cancelled' },
-            'repoA#7': { status: 'success' },
-            'repoA#8': { status: 'failed' },
-            'repoA#9': { status: 'success' },
-            'repoA#10': { status: 'success' },
-            'repoA#11': { status: 'success' }
+            'repoA#1': { status: 'success', updated: 1 },
+            'repoA#2': { status: 'success', updated: 2 },
+            'repoA#3': { status: 'success', updated: 3 },
+            'repoA#4': { status: 'failed', updated: 4 },
+            'repoA#5': { status: 'success', updated: 5 },
+            'repoA#6': { status: 'cancelled', updated: 6 },
+            'repoA#7': { status: 'success', updated: 7 },
+            'repoA#8': { status: 'failed', updated: 8 },
+            'repoA#9': { status: 'success', updated: 9 },
+            'repoA#10': { status: 'success', updated: 11 },
+            'repoA#11': { status: 'success', updated: 12 }
           }
         },
         repoB: {
           builds: {
-            'repoB#1': { status: 'failed' }
+            'repoB#1': { status: 'failed', updated: 10 }
           }
         }
       })
 
-      assert.deepEqual(templateData.repos.repoA.lastBuilds, [
-        { buildId: 'repoA#11', link: 'repoA/11.html', status: 'success' },
-        { buildId: 'repoA#10', link: 'repoA/10.html', status: 'success' },
-        { buildId: 'repoA#9', link: 'repoA/9.html', status: 'success' },
-        { buildId: 'repoA#8', link: 'repoA/8.html', status: 'failed' },
-        { buildId: 'repoA#7', link: 'repoA/7.html', status: 'success' }
+      assert.deepEqual(templateData.builds.map((b) => b.buildId), [
+        'repoA#11',
+        'repoA#10',
+        'repoB#1',
+        'repoA#9',
+        'repoA#8'
       ])
-
-      assert.deepEqual(templateData.repos.repoB.lastBuilds, [
-        { buildId: 'repoB#1', link: 'repoB/1.html', status: 'failed' }
-      ])
-    })
-
-    it('passes last successful build for each ref for each repo, sorting refs by name, master first', async function() {
-      let renderer = new Renderer()
-      let templateData
-      renderer.indexTemplate = function(data) {
-        templateData = data
-      }
-
-      await renderer._renderIndex(1, {
-        repoA: {
-          builds: {
-            'repoA#1': { id: 1, status: 'success', branch: 'master' },
-            'repoA#2': { id: 2, status: 'success', tag: 'mytag' },
-            'repoA#3': { id: 3, status: 'success', branch: 'abranch' },
-            'repoA#4': { id: 4, status: 'failed', branch: 'master' },
-            'repoA#5': { id: 5, status: 'success', tag: 'atag' },
-            'repoA#6': { id: 6, status: 'cancelled', tag: 'atag' },
-            'repoA#7': { id: 7, status: 'success', branch: 'mybranch' },
-            'repoA#8': { id: 8, status: 'failed', branch: 'master' },
-            'repoA#9': { id: 9, status: 'success', branch: 'mybranch' },
-            'repoA#10': { id: 10, status: 'success', tag: 'atag' },
-            'repoA#11': { id: 11, status: 'success', tag: 'mytag' }
-          }
-        }
-      })
-
-      assert.deepEqual(
-        templateData.repos.repoA.lastSuccessfulBuildByRef.map((b) => b.id),
-        [1, 3, 10, 9, 11]
-      )
     })
   })
 
@@ -424,8 +465,8 @@ describe('unit | status/render', function() {
         log.push('read status')
         return { repo1: 'repo 1 data', repo2: 'repo 2 data' }
       }
-      renderer._renderRepo = async function(status) {
-        log.push(`render with ${status}`)
+      renderer._renderRepo = async function(now, repo, status) {
+        log.push(`render with ${repo} ${status}`)
       }
       renderer._renderIndex = async function(now, status) {
         assert.equal(now, 1234)
@@ -441,8 +482,8 @@ describe('unit | status/render', function() {
 
       assert.deepEqual(log, [
         'read status',
-        'render with repo 1 data',
-        'render with repo 2 data',
+        'render with repo1 repo 1 data',
+        'render with repo2 repo 2 data',
         'render index',
         'set last render'
       ])

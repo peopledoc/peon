@@ -1,0 +1,91 @@
+<title>{{repoName}} - Peon</title>
+<meta http-equiv="refresh" content="5">
+<style>
+  .status-pending,
+  .status-running,
+  .status-cancelled {
+    background-color: #ddd;
+  }
+
+  .status-success {
+    background-color: #dfd;
+  }
+
+  .status-failed {
+    background-color: #fdd;
+  }
+</style>
+
+<h1>Peon status</h1>
+<a href="index.html">Peon status page</a>
+
+<h2>Builds for {{repoName}}</h2>
+
+<table width="100%">
+  <tr>
+    <th>
+      Build
+    </th>
+    <th colspan="3">
+      Ref
+    </th>
+    <th>
+      Enqueued
+    </th>
+    <th>
+      Time in queue
+    </th>
+    <th>
+      Job duration
+    </th>
+    <th>
+      Status
+    </th>
+    <th>
+      Output
+    </th>
+  </tr>
+  {{#each builds}}
+    <tr class="status-{{status}}">
+      <td>
+        <a href="{{link}}">{{buildNum}}</a>
+      </td>
+      <td>
+        {{refMode}}
+      </td>
+      <td>
+        {{ref}}
+      </td>
+      <td>
+        {{shortsha sha}}
+      </td>
+      <td>
+        {{date enqueued}}
+      </td>
+      <td>
+        {{#if start}}
+          {{time queueTime}}
+        {{else}}
+          &ndash;
+        {{/if}}
+      </td>
+      <td>
+        {{#if end}}
+          {{time runTime}}
+        {{else}}
+          &ndash;
+        {{/if}}
+      </td>
+      <td>
+        {{status}}
+      </td>
+      <td>
+        {{#if extra.outputURL}}
+          <a href="{{extra.outputURL}}" target="_blank">Build output</a>
+        {{/if}}
+      </td>
+    </tr>
+  {{/each}}
+</table>
+
+<i>Last updated at {{date now}}</i>

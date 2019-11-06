@@ -20,6 +20,10 @@ describe('unit | peon', function() {
         }
       })
 
+      mock('renderer', {
+        async render() {}
+      })
+
       mockConfig('watcher', {
         enabled: false
       })
@@ -29,6 +33,32 @@ describe('unit | peon', function() {
       await new Peon().start()
 
       assert.ok(aborted)
+    })
+  })
+
+  describe('renderer', function() {
+    it('runs a render on startup', async function() {
+      let rendered = false
+
+      mock('status', {
+        async abortStaleBuilds() {}
+      })
+
+      mock('renderer', {
+        async render() {
+          rendered = true
+        }
+      })
+
+      mockConfig('watcher', {
+        enabled: false
+      })
+
+      mockConfig('webhooks', { enabled: false })
+
+      await new Peon().start()
+
+      assert.ok(rendered)
     })
   })
 
@@ -48,6 +78,10 @@ describe('unit | peon', function() {
           }
         }
       )
+
+      mock('renderer', {
+        async render() {}
+      })
 
       mockConfig('watcher', {
         enabled: true,
@@ -78,6 +112,10 @@ describe('unit | peon', function() {
           start() {}
         }
       )
+
+      mock('renderer', {
+        async render() {}
+      })
 
       let dispatched
       mock('dispatcher', {
@@ -121,6 +159,10 @@ describe('unit | peon', function() {
         }
       )
 
+      mock('renderer', {
+        async render() {}
+      })
+
       mockConfig('watcher', {
         enabled: false,
         repositories: [
@@ -153,6 +195,10 @@ describe('unit | peon', function() {
         }
       )
 
+      mock('renderer', {
+        async render() {}
+      })
+
       mockConfig('watcher', {
         enabled: false
       })
@@ -175,6 +221,10 @@ describe('unit | peon', function() {
           start() {}
         }
       )
+
+      mock('renderer', {
+        async render() {}
+      })
 
       let dispatched
       mock('dispatcher', {
@@ -207,6 +257,10 @@ describe('unit | peon', function() {
           }
         }
       )
+
+      mock('renderer', {
+        async render() {}
+      })
 
       mockConfig('watcher', {
         enabled: false
