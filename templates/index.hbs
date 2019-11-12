@@ -83,9 +83,11 @@
         </td>
         <td>
           {{#if extra.outputURL}}
-            {{#unless extra.localCleaned}}
+            {{#if extra.localCleaned}}
+              Removed
+            {{else}}
               <a href="{{extra.outputURL}}" target="_blank">Build output</a>
-            {{/unless}}
+            {{/if}}
           {{/if}}
         </td>
       </tr>
