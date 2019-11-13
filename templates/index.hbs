@@ -18,7 +18,7 @@
 <h1>Peon status page</h1>
 
 {{#if hasData}}
-  <h2>Last 100 builds</h2>
+  <h2>Last {{buildCount}} builds</h2>
 
   <table width="100%">
     <tr>
@@ -50,13 +50,13 @@
     {{#each builds}}
       <tr class="status-{{status}}">
         <td>
-          <a href="{{repoLink}}">{{repoName}}</a>
+          <a href="{{repo_link}}">{{repo_name}}</a>
         </td>
         <td>
-          <a href="{{link}}">{{buildNum}}</a>
+          <a href="{{build_link}}">{{id}}</a>
         </td>
         <td>
-          {{refMode}}
+          {{ref_type}}
         </td>
         <td>
           {{ref}}
@@ -66,14 +66,14 @@
         </td>
         <td>
           {{#if start}}
-            {{time queueTime}}
+            {{time queue_time}}
           {{else}}
             &ndash;
           {{/if}}
         </td>
         <td>
           {{#if end}}
-            {{time runTime}}
+            {{time run_time}}
           {{else}}
             &ndash;
           {{/if}}
