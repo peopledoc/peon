@@ -4,8 +4,20 @@ const { lookup, mock, mockConfig } = require('../../helpers')
 const { GithubStatus } = lookup()
 
 describe('unit | status/github', function() {
+  beforeEach(function() {
+    mock('db', {
+      async getGitBuildInfo(id) {
+        if (id === 'non-github') {
+          return { url: 'git@example.com:org/repo', sha: 'COMMITSHA' }
+        } else if (id === 'github') {
+          return { url: 'git@github.com:org/repo', sha: 'COMMITSHA' }
+        }
+      }
+    })
+  })
+
   describe('GithubStatus.update', function() {
-    it('does nothing when no github token is configured', function() {
+    it('does nothing when no github token is configured', async function() {
       let runCalled = false
 
       mockConfig('githubAPIToken', null)
@@ -18,10 +30,8 @@ describe('unit | status/github', function() {
         }
       )
 
-      new GithubStatus().update(
-        'git@github.com:org/repo',
-        'id',
-        'sha',
+      await new GithubStatus().update(
+        'github',
         'state',
         'description'
       )
@@ -29,7 +39,7 @@ describe('unit | status/github', function() {
       assert.notOk(runCalled)
     })
 
-    it('does nothing for non-github repositories', function() {
+    it('does nothing for non-github repositories', async function() {
       let runCalled = false
 
       mockConfig('githubAPIToken', 'abcdef')
@@ -42,10 +52,8 @@ describe('unit | status/github', function() {
         }
       )
 
-      new GithubStatus().update(
-        'git@example.com:org/repo',
-        'id',
-        'sha',
+      await new GithubStatus().update(
+        'non-github',
         'state',
         'description'
       )
@@ -53,7 +61,7 @@ describe('unit | status/github', function() {
       assert.notOk(runCalled)
     })
 
-    it('enqueues and sends updates', function() {
+    it('enqueues and sends updates', async function() {
       let octokitParams, octokitStatus, queuedFunction
 
       mockConfig('githubAPIToken', 'abcdef')
@@ -82,10 +90,8 @@ describe('unit | status/github', function() {
         }
       )
 
-      new GithubStatus().update(
-        'git@github.com:org/repo',
-        'REPOBUILDS#BUILDID',
-        'COMMITSHA',
+      await new GithubStatus().update(
+        'github',
         'STATUSSTATE',
         'STATUSDESCR'
       )
@@ -102,7 +108,7 @@ describe('unit | status/github', function() {
         sha: 'COMMITSHA',
         state: 'STATUSSTATE',
         // eslint-disable-next-line camelcase
-        target_url: 'status://url/REPOBUILDS/BUILDID.html',
+        target_url: 'status://url/github.html',
         context: 'peon',
         description: 'STATUSDESCR'
       })

@@ -8,6 +8,10 @@ const { lookup, register } = require(`${src}/injections`)
 
 const pendingCleanup = []
 
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 module.exports = {
   // Paths to peon sources
   root,
@@ -58,10 +62,22 @@ module.exports = {
     while (pendingCleanup.length) {
       await pendingCleanup.pop()()
     }
+
+    let { db } = lookup()
+    db.close()
   },
 
   // Return a promise that resolves in ms milliseconds
-  wait(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms))
+  wait,
+
+  async waitUntil(predicate, timeout = 1000)  {
+    let start = Date.now()
+    while (!predicate()) {
+      if (Date.now() > start + timeout) {
+        throw new Error('waitUntil timed out')
+      }
+
+      await wait(10)
+    }
   }
 }
