@@ -57,21 +57,12 @@ describe('unit | build/build', function() {
       ])
     })
 
-    it('updates build status with step output', async function() {
-      await runStep(async() => {
-        wait(20)
-        return 'step output'
-      })
-
-      assert.equal(stepLog.pop().output, 'step output')
-    })
-
     it('updates build status with output during step execution', async function() {
       await runStep(async(updateOutput) => {
-        wait(20)
+        await wait(20)
         updateOutput('partial output')
-        wait(20)
-        return 'final output'
+        await wait(20)
+        updateOutput('final output')
       })
 
       assert.deepEqual(stepLog, [
@@ -90,6 +81,12 @@ describe('unit | build/build', function() {
         {
           build: 'ID',
           output: 'final output',
+          status: 'running',
+          step: 'mystep'
+        },
+        {
+          build: 'ID',
+          output: undefined,
           status: 'success',
           step: 'mystep'
         }
@@ -586,7 +583,8 @@ describe('unit | build/build', function() {
       build.peonConfig = { cache: 'cache' }
       build.workspace = 'workspace'
 
-      let restoreCacheArgs
+      let restoreCacheArgs, stepOutput
+
       mock('cache', {
         restoreCache() {
           restoreCacheArgs = [...arguments]
@@ -594,9 +592,9 @@ describe('unit | build/build', function() {
         }
       })
 
-      let ret = await build._restoreCache()
+      await build._restoreCache((output) => stepOutput = output)
       assert.deepEqual(restoreCacheArgs, ['reponame', 'workspace', 'cache'])
-      assert.equal(ret, 'restored paths path1, path2')
+      assert.equal(stepOutput, 'restored paths path1, path2')
     })
 
     it('throws a BuildWarning when an error happens', async function() {
@@ -635,7 +633,7 @@ describe('unit | build/build', function() {
       build.peonConfig = { cache: 'cache' }
       build.workspace = 'workspace'
 
-      let saveCacheArgs
+      let saveCacheArgs, stepOutput
       mock('cache', {
         saveCache() {
           saveCacheArgs = [...arguments]
@@ -643,9 +641,9 @@ describe('unit | build/build', function() {
         }
       })
 
-      let ret = await build._saveCache()
+      await build._saveCache((output) => stepOutput = output)
       assert.deepEqual(saveCacheArgs, ['reponame', 'workspace', 'cache'])
-      assert.equal(ret, 'saved paths path1, path2')
+      assert.equal(stepOutput, 'saved paths path1, path2')
     })
 
     it('throws a BuildWarning when an error happens', async function() {
@@ -683,23 +681,16 @@ describe('unit | build/build', function() {
 
       let updates = []
 
-      let output = await build._runCommand(
+      await build._runCommand(
         resolve(root, 'scripts', 'test_command'),
         (out) => updates.push(out)
       )
-
-      assert.deepEqual(output.split('\n'), [
-        '[stdout] output line 1',
-        '[stdout] output line 2',
-        '[stderr] error line',
-        '[stdout] output line 3',
-        ''
-      ])
 
       assert.deepEqual(updates, [
         '[stdout] output line 1\n',
         '[stdout] output line 1\n[stdout] output line 2\n',
         '[stdout] output line 1\n[stdout] output line 2\n[stderr] error line\n',
+        '[stdout] output line 1\n[stdout] output line 2\n[stderr] error line\n[stdout] output line 3\n',
         '[stdout] output line 1\n[stdout] output line 2\n[stderr] error line\n[stdout] output line 3\n'
       ])
     })
@@ -709,7 +700,8 @@ describe('unit | build/build', function() {
       build.env = new Environment({})
       build.workspace = await tempDir()
 
-      let output = await build._runCommand('pwd', () => {})
+      let output
+      await build._runCommand('pwd', (out) => output = out)
 
       assert.deepEqual(output, `[stdout] ${build.workspace}\n`)
     })
@@ -722,7 +714,8 @@ describe('unit | build/build', function() {
       })
       build.workspace = await tempDir()
 
-      let output = await build._runCommand('env', () => {})
+      let output
+      await build._runCommand('env', (out) => output = out)
 
       let envLines = output.replace(/\[stdout\] /g, '').split('\n')
       assert.include(envLines, 'VAR1=VALUE')
