@@ -49,6 +49,7 @@ describe('unit | status/render', function() {
 
       assert.isFunction(renderer.indexTemplate)
       assert.isFunction(renderer.buildTemplate)
+      assert.isFunction(renderer.buildredirTemplate)
       assert.isFunction(renderer.repoTemplate)
     })
   })
@@ -216,6 +217,39 @@ describe('unit | status/render', function() {
       })
 
       assert.notOk(templateData.is_running)
+    })
+
+    it('renders redirection template when build has extra.oldBuildID', async function() {
+      let renderer = new Renderer()
+      let templateData
+
+      renderer.buildTemplate = function() {}
+      renderer.buildredirTemplate = function(data) {
+        templateData = data
+        return 'redirection page'
+      }
+
+      mock('db', {
+        async getSteps() {
+          return []
+        }
+      })
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
+        data: 'some build data',
+        status: 'cancelled',
+        extra: {
+          oldBuildID: 'repo#12345'
+        }
+      })
+
+      assert.deepEqual(templateData, { id: 100 })
+
+      assert.equal(
+        await readFile(resolve(statusDirectory, 'repo/12345.html')),
+        'redirection page'
+      )
     })
   })
 
