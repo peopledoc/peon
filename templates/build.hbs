@@ -1,5 +1,5 @@
-<title>{{buildId}} - Peon</title>
-{{#if isRunning}}
+<title>Build #{{id}} on {{repo_name}} - Peon</title>
+{{#if is_running}}
   <meta http-equiv="refresh" content="5">
 {{/if}}
 <style>
@@ -22,11 +22,11 @@
   }
 </style>
 
-<h1 class="status-{{status}}">Build {{buildId}} <span class="duration">({{time duration}})</span></h1>
-<a href="../{{repoName}}.html">View all builds for {{repoName}}</a> &ndash;
-<a href="../index.html">Peon status page</a><br><br>
+<h1 class="status-{{status}}">Build #{{id}} on {{repo_name}} <span class="duration">({{time run_time}})</span></h1>
+<a href="{{repo_link}}">View all builds for {{repo_name}}</a> &ndash;
+<a href="index.html">Peon status page</a><br><br>
 
-Building SHA {{sha}} on {{branch}}{{tag}}<br>
+Building SHA {{sha}} on {{ref_type}} {{ref}}<br>
 Enqueued at {{date enqueued}}<br>
 {{#if start}}Started at {{date start}}<br>{{/if}}
 {{#if end}}Finished at {{date end}}<br>{{/if}}

@@ -1,630 +1,176 @@
 const { assert } = require('chai')
-const { readFile, writeFile } = require('fs-extra')
-const { resolve } = require('path')
 const { lookup, mock, mockConfig, tempDir } = require('../../helpers')
 const { Status } = lookup()
 
 describe('unit | status/status', function() {
-  let statusRoot
-
   beforeEach(async function() {
-    let wd = await tempDir()
-    statusRoot = resolve(wd, 'status')
-    mockConfig('workingDirectory', wd)
-    mockConfig('statusDirectory', await tempDir())
-  })
-
-  describe('Status._updateRepoStatus', function() {
-    it('initializes repo status file', async function() {
-      mock('renderer', { render() {} })
-
-      await new Status()._updateRepoStatus('reponame', (s) => s)
-
-      let status = JSON.parse(
-        await readFile(resolve(statusRoot, 'reponame.json'))
-      )
-      assert.deepEqual(status, {
-        nextBuildNum: 1,
-        builds: {}
-      })
-    })
-
-    it('passes current status file content and current date to updater', async function() {
-      mock('renderer', { render() {} })
-
-      let status = new Status()
-
-      await status._ensureDirsExist()
-      await writeFile(
-        resolve(statusRoot, 'reponame.json'),
-        JSON.stringify({ some: { status: 'content' } })
-      )
-
-      let updaterArgs
-      await status._updateRepoStatus('reponame', function() {
-        updaterArgs = [...arguments]
-      })
-
-      assert.deepEqual(updaterArgs[0], { some: { status: 'content' } })
-      assert.closeTo(updaterArgs[1], Date.now(), 1000)
-    })
-
-    it('writes updated status to status file', async function() {
-      mock('renderer', { render() {} })
-
-      await new Status()._updateRepoStatus(
-        'reponame',
-        (s) => (s.some = { status: 'content' })
-      )
-
-      let status = JSON.parse(
-        await readFile(resolve(statusRoot, 'reponame.json'))
-      )
-      assert.deepEqual(status.some, { status: 'content' })
-    })
-
-    it('returns what updater returns', async function() {
-      mock('renderer', { render() {} })
-
-      assert.equal(
-        await new Status()._updateRepoStatus('reponame', () => 'foo'),
-        'foo'
-      )
-    })
-
-    it('calls renderer.render with current date', async function() {
-      let called
-      mock('renderer', {
-        render(now) {
-          called = now
-        }
-      })
-
-      await new Status()._updateRepoStatus('reponame', () => {})
-
-      assert.closeTo(called, Date.now(), 1000)
-    })
+    mockConfig('workingDirectory', await tempDir())
   })
 
   describe('Status.startBuild', function() {
-    it('generates a new build ID', async function() {
+    it('retrieves repo, creates a build, updates github status, triggers a render, and returns the build ID', async function() {
       let status = new Status()
-      let updateArgs
-      status._updateRepoStatus = function() {
-        updateArgs = [...arguments]
-        return 'ret'
-      }
+      let log = []
 
-      let ret = await status.startBuild('repo/url', 'reponame')
-      assert.equal(ret, 'ret')
-      assert.equal(updateArgs[0], 'reponame')
+      mock('db', {
+        async getOrCreateRepo({ name, url }) {
+          log.push(`get or create repo ${name} at ${url}`)
+          return { id: 42, name, url }
+        },
 
-      let repoStatus = { nextBuildNum: 100, builds: {} }
-      assert.equal(updateArgs[1](repoStatus), 'reponame#100')
-      assert.equal(repoStatus.nextBuildNum, 101)
-    })
-
-    it('sends a "pending" github status update', async function() {
-      let updater, ghArgs
-
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      mock('githubStatus', {
-        update() {
-          ghArgs = [...arguments]
+        async createBuild({ repoId, refMode, ref, sha }) {
+          log.push(`create build for repo#${repoId} on ${refMode} ${ref} at ${sha}`)
+          return 43
         }
       })
 
-      await status.startBuild('repo/url', 'reponame', '', '', 'sha')
+      mock('githubStatus', {
+        update(build, status, text) {
+          log.push(`gh status for build#${build}: ${status}, ${text}`)
+        }
+      })
 
-      updater({ nextBuildNum: 100, builds: {} })
+      mock('renderer', {
+        render() {
+          log.push('render')
+        }
+      })
 
-      assert.deepEqual(ghArgs, [
-        'repo/url',
-        'reponame#100',
-        'sha',
-        'pending',
-        'Peon build is queued'
+      let id = await status.startBuild('repourl', 'reponame', 'branch', 'mybranch', 'mysha')
+
+      assert.equal(id, 43)
+      assert.deepEqual(log, [
+        'get or create repo reponame at repourl',
+        'create build for repo#42 on branch mybranch at mysha',
+        'gh status for build#43: pending, Peon build is queued',
+        'render'
       ])
-    })
-
-    it('adds info for the new build to the repo status', async function() {
-      let updater
-
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.startBuild(
-        'repo/url',
-        'reponame',
-        'branch',
-        'mybranch',
-        'sha'
-      )
-
-      let repoStatus = { nextBuildNum: 100, builds: {} }
-      let now = Date.now()
-      updater(repoStatus, now)
-      assert.deepEqual(repoStatus.builds['reponame#100'], {
-        branch: 'mybranch',
-        tag: null,
-        sha: 'sha',
-        url: 'repo/url',
-        enqueued: now,
-        updated: now,
-        status: 'pending',
-        steps: []
-      })
-
-      await status.startBuild('repo/url', 'reponame', 'tag', 'mytag', 'sha')
-
-      repoStatus = { nextBuildNum: 100, builds: {} }
-      updater(repoStatus, now)
-      assert.deepEqual(repoStatus.builds['reponame#100'], {
-        branch: null,
-        tag: 'mytag',
-        sha: 'sha',
-        url: 'repo/url',
-        enqueued: now,
-        updated: now,
-        status: 'pending',
-        steps: []
-      })
     })
   })
 
   describe('Status.updateBuildStep', async function() {
-    it('sends a "pending" github status update with current step', async function() {
-      let updater, ghArgs
-
+    it('updates step, updates github status and triggers a render', async function() {
       let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
+      let log = []
+
+      mock('db', {
+        async updateStep({ buildId, description, status, output }) {
+          log.push(`update step ${description} of build#${buildId}: ${status}, ${output}`)
+        }
+      })
 
       mock('githubStatus', {
-        update() {
-          ghArgs = [...arguments]
+        update(build, status, text) {
+          log.push(`gh status for build#${build}: ${status}, ${text}`)
         }
       })
 
-      await status.updateBuildStep('reponame#100', 'my step')
-
-      updater({
-        nextBuildNum: 100,
-        builds: { 'reponame#100': { url: 'repo/url', sha: 'sha', steps: [] } }
+      mock('renderer', {
+        render() {
+          log.push('render')
+        }
       })
 
-      assert.deepEqual(ghArgs, [
-        'repo/url',
-        'reponame#100',
-        'sha',
-        'pending',
-        "Peon build is running 'my step'"
-      ])
-    })
+      await status.updateBuildStep(42, 'my step', 'step status', 'step output')
 
-    it('updates build status, update date and start date', async function() {
-      let updater
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.updateBuildStep('reponame#100', 'my step')
-
-      let now = Date.now()
-      let before = now - 1000
-      let build = {
-        url: 'repo/url',
-        steps: [],
-        updated: before,
-        status: 'pending'
-      }
-      let repoStatus = {
-        nextBuildNum: 100,
-        builds: { 'reponame#100': build }
-      }
-      updater(repoStatus, now)
-
-      assert.equal(build.status, 'running')
-      assert.equal(build.updated, now)
-      assert.equal(build.start, now)
-    })
-
-    it('does not update start date when it is already present', async function() {
-      let updater
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.updateBuildStep('reponame#100', 'my step')
-
-      let now = Date.now()
-      let before = now - 1000
-      let build = {
-        url: 'repo/url',
-        steps: [],
-        start: before
-      }
-      let repoStatus = {
-        nextBuildNum: 100,
-        builds: { 'reponame#100': build }
-      }
-
-      updater(repoStatus, now)
-
-      assert.equal(build.start, before)
-    })
-
-    it('adds a new step when the step is not present', async function() {
-      let updater
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.updateBuildStep(
-        'reponame#100',
-        'my step',
-        'some status',
-        'some output'
-      )
-
-      let now = Date.now()
-      let before = now - 1000
-      let build = {
-        url: 'repo/url',
-        steps: [],
-        start: before
-      }
-      let repoStatus = {
-        nextBuildNum: 100,
-        builds: { 'reponame#100': build }
-      }
-      updater(repoStatus, now)
-
-      assert.deepEqual(build.steps, [
-        {
-          description: 'my step',
-          start: now,
-          status: 'some status',
-          output: 'some output'
-        }
-      ])
-    })
-
-    it('updates an existing step', async function() {
-      let updater
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.updateBuildStep(
-        'reponame#100',
-        'my step',
-        'some new status',
-        'some new output'
-      )
-
-      let now = Date.now()
-      let before = now - 1000
-      let build = {
-        url: 'repo/url',
-        steps: [
-          {
-            description: 'my step',
-            start: before,
-            status: 'some status',
-            output: 'some output'
-          }
-        ],
-        start: before
-      }
-      let repoStatus = {
-        nextBuildNum: 100,
-        builds: { 'reponame#100': build }
-      }
-      updater(repoStatus, now)
-
-      assert.deepEqual(build.steps, [
-        {
-          description: 'my step',
-          start: before,
-          status: 'some new status',
-          output: 'some new output'
-        }
-      ])
-    })
-
-    it('sets step end and duration when step status is "success"', async function() {
-      let updater
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.updateBuildStep(
-        'reponame#100',
-        'my step',
-        'success',
-        'some new output'
-      )
-
-      let now = Date.now()
-      let before = now - 1000
-      let build = {
-        url: 'repo/url',
-        steps: [
-          {
-            description: 'my step',
-            start: before,
-            status: 'some status',
-            output: 'some output'
-          }
-        ],
-        start: before
-      }
-      let repoStatus = {
-        nextBuildNum: 100,
-        builds: { 'reponame#100': build }
-      }
-      updater(repoStatus, now)
-
-      assert.deepEqual(build.steps, [
-        {
-          description: 'my step',
-          start: before,
-          end: now,
-          duration: 1000,
-          status: 'success',
-          output: 'some new output'
-        }
-      ])
-    })
-
-    it('sets step end and duration when step status is "failed"', async function() {
-      let updater
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.updateBuildStep(
-        'reponame#100',
-        'my step',
-        'failed',
-        'some new output'
-      )
-
-      let now = Date.now()
-      let before = now - 1000
-      let build = {
-        url: 'repo/url',
-        steps: [
-          {
-            description: 'my step',
-            start: before,
-            status: 'some status',
-            output: 'some output'
-          }
-        ],
-        start: before
-      }
-      let repoStatus = {
-        nextBuildNum: 100,
-        builds: { 'reponame#100': build }
-      }
-      updater(repoStatus, now)
-
-      assert.deepEqual(build.steps, [
-        {
-          description: 'my step',
-          start: before,
-          end: now,
-          duration: 1000,
-          status: 'failed',
-          output: 'some new output'
-        }
+      assert.deepEqual(log, [
+        'update step my step of build#42: step status, step output',
+        'gh status for build#42: pending, Peon build is running \'my step\'',
+        'render'
       ])
     })
   })
 
   describe('Status.finishBuild', function() {
-    it('sends a "success" github status update when build status is successful', async function() {
-      let updater, ghArgs
-
+    it('updates build, updates github status and triggers a render', async function() {
       let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
+      let log = []
 
-      mock('githubStatus', {
-        update() {
-          ghArgs = [...arguments]
+      mock('db', {
+        async updateBuild({ id, status, extra }) {
+          log.push(`update build#${id}: ${status}, ${extra}`)
         }
       })
 
-      await status.finishBuild('reponame#100', 'success')
-
-      updater({
-        nextBuildNum: 100,
-        builds: { 'reponame#100': { url: 'repo/url', sha: 'sha', steps: [] } }
-      })
-
-      assert.deepEqual(ghArgs, [
-        'repo/url',
-        'reponame#100',
-        'sha',
-        'success',
-        'Peon build is finished'
-      ])
-    })
-
-    it('sends a "failure" github status update when build status is failed', async function() {
-      let updater, ghArgs
-
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
       mock('githubStatus', {
-        update() {
-          ghArgs = [...arguments]
+        update(build, status, text) {
+          log.push(`gh status for build#${build}: ${status}, ${text}`)
         }
       })
 
-      await status.finishBuild('reponame#100', 'failed')
-
-      updater({
-        nextBuildNum: 100,
-        builds: { 'reponame#100': { url: 'repo/url', sha: 'sha', steps: [] } }
-      })
-
-      assert.deepEqual(ghArgs, [
-        'repo/url',
-        'reponame#100',
-        'sha',
-        'failure',
-        'Peon build has failed'
-      ])
-    })
-
-    it('sends a "failure" github status update when build status is cancelled', async function() {
-      let updater, ghArgs
-
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      mock('githubStatus', {
-        update() {
-          ghArgs = [...arguments]
+      mock('renderer', {
+        render() {
+          log.push('render')
         }
       })
 
-      await status.finishBuild('reponame#100', 'cancelled')
+      await status.finishBuild(42, 'success', 'extra for 42')
+      await status.finishBuild(43, 'cancelled', 'extra for 43')
+      await status.finishBuild(44, 'failed', 'extra for 44')
 
-      updater({
-        nextBuildNum: 100,
-        builds: { 'reponame#100': { url: 'repo/url', sha: 'sha', steps: [] } }
-      })
+      assert.deepEqual(log, [
+        'update build#42: success, extra for 42',
+        'gh status for build#42: success, Peon build is finished',
+        'render',
 
-      assert.deepEqual(ghArgs, [
-        'repo/url',
-        'reponame#100',
-        'sha',
-        'failure',
-        'Peon build was cancelled'
+        'update build#43: cancelled, extra for 43',
+        'gh status for build#43: failure, Peon build was cancelled',
+        'render',
+
+        'update build#44: failed, extra for 44',
+        'gh status for build#44: failure, Peon build has failed',
+        'render'
       ])
-    })
-
-    it('updates build status', async function() {
-      let updater
-
-      let status = new Status()
-      status._updateRepoStatus = (_, u) => (updater = u)
-
-      await status.finishBuild('reponame#100', 'some status', 'some extra info')
-
-      let now = Date.now()
-      let before = now - 1000
-      let build = { url: 'repo/url', sha: 'sha', steps: [], start: before }
-
-      updater(
-        {
-          nextBuildNum: 100,
-          builds: { 'reponame#100': build }
-        },
-        now
-      )
-
-      assert.equal(build.status, 'some status')
-      assert.equal(build.end, now)
-      assert.equal(build.updated, now)
-      assert.equal(build.duration, 1000)
-      assert.equal(build.extra, 'some extra info')
     })
   })
 
   describe('Status.abortStaleBuilds', function() {
-    it('aborts stale builds', async function() {
+    it('gets stale builds, mark running steps as failed, build as cancelled, and updates github status', async function() {
       let status = new Status()
-      let rendered = false
-      let updates = []
+      let log = []
 
-      mock('renderer', {
-        async render() {
-          rendered = true
+      mock('db', {
+        async getStaleBuilds() {
+          log.push('fetch stale builds')
+          return [{ id: 42 }, { id: 43 }]
+        },
+
+        async getSteps(buildID) {
+          log.push(`fetch steps for build#${buildID}`)
+          return [
+            { id: 10 * buildID + 1, description: `build#${buildID} step 1`, status: 'success', output: 'step 1 output' },
+            { id: 10 * buildID + 2, description: `build#${buildID} step 2`, status: 'running', output: 'step 2 output' }
+          ]
+        },
+
+        async updateBuild({ id, status }) {
+          log.push(`update build#${id}: ${status}`)
+        },
+
+        async updateStep({ buildId, description, status, output }) {
+          log.push(`update step ${description} of build#${buildId}: ${status}, ${output}`)
         }
       })
 
       mock('githubStatus', {
-        async update() {
-          updates.push([...arguments])
+        update(build, status, text) {
+          log.push(`gh status for build#${build}: ${status}, ${text}`)
         }
       })
 
-      await status._ensureDirsExist()
-      await writeFile(
-        resolve(statusRoot, 'reponame.json'),
-        JSON.stringify({
-          builds: {
-            mybuild1: {
-              status: 'pending',
-              url: 'myurl',
-              sha: 'sha1',
-              steps: []
-            },
-            mybuild2: {
-              status: 'running',
-              url: 'myurl',
-              sha: 'sha2',
-              steps: [{ status: 'success' }, { status: 'running' }]
-            },
-            mybuild3: {
-              status: 'success',
-              url: 'myurl',
-              sha: 'sha3',
-              steps: [{ status: 'success' }]
-            }
-          }
-        })
-      )
-
       await status.abortStaleBuilds()
 
-      let {
-        builds: { mybuild1, mybuild2, mybuild3 }
-      } = JSON.parse(await readFile(resolve(statusRoot, 'reponame.json')))
-
-      assert.equal(mybuild1.status, 'cancelled')
-      assert.equal(mybuild2.status, 'cancelled')
-      assert.equal(mybuild2.steps[1].status, 'failed')
-      assert.equal(mybuild2.steps[1].output, 'stale build was aborted')
-      assert.equal(mybuild3.status, 'success')
-
-      assert.deepEqual(updates, [
-        ['myurl', 'mybuild1', 'sha1', 'error', 'Peon stale build was aborted'],
-        ['myurl', 'mybuild2', 'sha2', 'error', 'Peon stale build was aborted']
+      assert.deepEqual(log, [
+        'fetch stale builds',
+        'fetch steps for build#42',
+        'update step build#42 step 2 of build#42: failed, step 2 output\n(stale build was aborted)',
+        'update build#42: cancelled',
+        'gh status for build#42: error, Peon stale build was aborted',
+        'fetch steps for build#43',
+        'update step build#43 step 2 of build#43: failed, step 2 output\n(stale build was aborted)',
+        'update build#43: cancelled',
+        'gh status for build#43: error, Peon stale build was aborted'
       ])
-
-      assert.ok(rendered)
-    })
-
-    it('does not rerender when nothing was aborted', async function() {
-      let status = new Status()
-      let rendered = false
-
-      mock('renderer', {
-        async render() {
-          rendered = true
-        }
-      })
-
-      await status._ensureDirsExist()
-      await writeFile(
-        resolve(statusRoot, 'reponame.json'),
-        JSON.stringify({
-          builds: {
-            mybuild: {
-              status: 'success',
-              url: 'myurl',
-              sha: 'sha',
-              steps: [{ status: 'success' }]
-            }
-          }
-        })
-      )
-
-      await status.abortStaleBuilds()
-
-      assert.notOk(rendered)
     })
   })
 })

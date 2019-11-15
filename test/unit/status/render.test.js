@@ -1,19 +1,21 @@
+/* eslint-disable camelcase */
+
 const { assert } = require('chai')
-const { mkdir, readFile, writeFile } = require('fs-extra')
+const { readFile } = require('fs-extra')
 const { resolve } = require('path')
-const { lookup, mock, mockConfig, tempDir } = require('../../helpers')
+const { lookup, mock, mockConfig, tempDir, wait, waitUntil } = require('../../helpers')
 const { Renderer } = lookup()
 
 describe('unit | status/render', function() {
-  let workingDirectory
+  let statusDirectory
 
   beforeEach(async function() {
-    workingDirectory = await tempDir()
-    mockConfig('workingDirectory', workingDirectory)
+    statusDirectory = await tempDir()
+    mockConfig('statusDirectory', statusDirectory)
   })
 
-  describe('Renderer.init', function() {
-    it('registers a date helper', async function() {
+  describe('Renderer._init', function() {
+    it('registers handlebars helpers', async function() {
       let helpers = {}
       mock('Handlebars', {
         compile() {},
@@ -23,260 +25,235 @@ describe('unit | status/render', function() {
       })
 
       let renderer = new Renderer()
-      await renderer.init()
+      await renderer._init()
 
       assert.isFunction(helpers.date)
+      assert.equal(
+        helpers.date(Number(new Date('2001-02-03T04:05:06Z'))),
+        '2001-02-03T04:05:06.000Z'
+      )
 
-      let date = new Date('2001-02-03T04:05:06Z')
-      assert.equal(helpers.date(Number(date)), '2001-02-03T04:05:06.000Z')
+      assert.isFunction(helpers.shortsha)
+      assert.equal(helpers.shortsha('abcdefghijkl'), 'abcdefgh')
+
+      assert.isFunction(helpers.time)
+      assert.equal(helpers.time(null), '')
+      assert.equal(helpers.time(50), '50ms')
+      assert.equal(helpers.time(5678), '5.7s')
+      assert.equal(helpers.time(67890), '1m07s')
     })
 
     it('compiles templates', async function() {
       let renderer = new Renderer()
-      await renderer.init()
+      await renderer._init()
 
       assert.isFunction(renderer.indexTemplate)
       assert.isFunction(renderer.buildTemplate)
-    })
-  })
-
-  describe('Renderer._getLastRender', function() {
-    it('returns 0 when no previous render was done', async function() {
-      let renderer = new Renderer()
-      assert.equal(await renderer._getLastRender(), 0)
-      assert.equal(renderer.lastRender, 0)
-    })
-
-    it('returns last render date from saved JSON file', async function() {
-      let renderer = new Renderer()
-
-      await mkdir(resolve(workingDirectory, 'status'))
-      await writeFile(
-        resolve(workingDirectory, 'status', 'peon-status.json'),
-        JSON.stringify({ lastRender: 1234 })
-      )
-
-      assert.equal(await renderer._getLastRender(), 1234)
-      assert.equal(renderer.lastRender, 1234)
-    })
-
-    it('does not read JSON file again when last render is already known', async function() {
-      let renderer = new Renderer()
-
-      await mkdir(resolve(workingDirectory, 'status'))
-      await writeFile(
-        resolve(workingDirectory, 'status', 'peon-status.json'),
-        'invalid json'
-      )
-
-      renderer.lastRender = 1234
-      assert.equal(await renderer._getLastRender(), 1234)
-      assert.equal(renderer.lastRender, 1234)
-    })
-  })
-
-  describe('Renderer._setLastRender', function() {
-    it('sets last render property and saves to JSON file', async function() {
-      let renderer = new Renderer()
-      await renderer._setLastRender(1234)
-      assert.equal(renderer.lastRender, 1234)
-      assert.deepEqual(
-        JSON.parse(
-          await readFile(
-            resolve(workingDirectory, 'status', 'peon-status.json')
-          )
-        ),
-        { lastRender: 1234 }
-      )
-    })
-  })
-
-  describe('Renderer._readReposStatus', function() {
-    it('reads nothing when no status files are present', async function() {
-      assert.deepEqual(await new Renderer()._readReposStatus(), {})
-    })
-
-    it('ignores peon-status.json', async function() {
-      await mkdir(resolve(workingDirectory, 'status'))
-      await writeFile(
-        resolve(workingDirectory, 'status', 'peon-status.json'),
-        'invalid json'
-      )
-
-      assert.deepEqual(await new Renderer()._readReposStatus(), {})
-    })
-
-    it('reads data from repo status files', async function() {
-      await mkdir(resolve(workingDirectory, 'status'))
-      await writeFile(
-        resolve(workingDirectory, 'status', 'repo1.json'),
-        JSON.stringify({
-          data: { from: 'repo1' }
-        })
-      )
-      await writeFile(
-        resolve(workingDirectory, 'status', 'repo2.json'),
-        JSON.stringify({
-          data: { from: 'repo2' }
-        })
-      )
-
-      assert.deepEqual(await new Renderer()._readReposStatus(), {
-        repo1: { data: { from: 'repo1' } },
-        repo2: { data: { from: 'repo2' } }
-      })
+      assert.isFunction(renderer.buildredirTemplate)
+      assert.isFunction(renderer.repoTemplate)
     })
   })
 
   describe('Renderer._renderBuild', function() {
-    let statusDirectory
 
-    beforeEach(async function() {
-      statusDirectory = await tempDir()
-      mockConfig('statusDirectory', statusDirectory)
-    })
-
-    it('does not render a build when not updated since last render', async function() {
-      let renderer = new Renderer()
-      renderer.lastRender = 1234
-      renderer.buildTemplate = function() {
-        throw new Error('should not be called')
-      }
-
-      await renderer._renderBuild('repo#100', { updated: 1000 })
-      assert.ok(true)
-    })
-
-    it('renders build when updated since last render', async function() {
+    it('renders build', async function() {
       let renderer = new Renderer()
       let templateData
-      renderer.lastRender = 1234
+
+      mock('db', {
+        async getSteps(id) {
+          assert.equal(id, 100)
+          return [
+            { step: 'step1', start: 100, end: 200 },
+            { step: 'step2', start: 100 }
+          ]
+        }
+      })
+
       renderer.buildTemplate = function(data) {
         templateData = data
         return 'template render output'
       }
 
-      await renderer._renderBuild('repo#100', {
-        updated: 2000,
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
         data: 'some build data',
-        tag: 'mytag'
+        enqueued: 500,
+        start: 1000,
+        end: 2000
       })
 
       assert.deepEqual(templateData, {
-        buildId: 'repo#100',
-        buildNum: '100',
-        link: 'repo/100.html',
-        ref: 'mytag',
-        tag: 'mytag',
-        refMode: 'tag',
-        repoName: 'repo',
-        queueTime: null,
-        runTime: null,
-        updated: 2000,
+        id: 100,
         data: 'some build data',
-        isRunning: false
+        enqueued: 500,
+        start: 1000,
+        end: 2000,
+
+        is_running: false,
+        queue_time: 500,
+        run_time: 1000,
+        repo_link: 'repo.html',
+        repo_name: 'repo',
+        build_link: '100.html',
+
+        steps: [
+          { step: 'step1', start: 100, end: 200, duration: 100 },
+          { step: 'step2', start: 100, duration: null }
+        ]
       })
 
       assert.equal(
-        await readFile(resolve(statusDirectory, 'repo', '100.html')),
+        await readFile(resolve(statusDirectory, '100.html')),
         'template render output'
       )
     })
 
-    it('passes isRunning=true when build is pending', async function() {
+    it('passes is_running=true when build is pending', async function() {
       let renderer = new Renderer()
       let templateData
-      renderer.lastRender = 1234
       renderer.buildTemplate = function(data) {
         templateData = data
       }
 
-      await renderer._renderBuild('repo#100', {
-        updated: 2000,
+      mock('db', {
+        async getSteps() {
+          return []
+        }
+      })
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
         data: 'some build data',
         status: 'pending'
       })
 
-      assert.ok(templateData.isRunning)
+      assert.ok(templateData.is_running)
     })
 
-    it('passes isRunning=true when build is running', async function() {
+    it('passes is_running=true when build is running', async function() {
       let renderer = new Renderer()
       let templateData
-      renderer.lastRender = 1234
       renderer.buildTemplate = function(data) {
         templateData = data
       }
 
-      await renderer._renderBuild('repo#100', {
-        updated: 2000,
+      mock('db', {
+        async getSteps() {
+          return []
+        }
+      })
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
         data: 'some build data',
         status: 'running'
       })
 
-      assert.ok(templateData.isRunning)
+      assert.ok(templateData.is_running)
     })
 
-    it('passes isRunning=false when build is successful', async function() {
+    it('passes is_running=false when build is successful', async function() {
       let renderer = new Renderer()
       let templateData
-      renderer.lastRender = 1234
       renderer.buildTemplate = function(data) {
         templateData = data
       }
 
-      await renderer._renderBuild('repo#100', {
-        updated: 2000,
+      mock('db', {
+        async getSteps() {
+          return []
+        }
+      })
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
         data: 'some build data',
         status: 'success'
       })
 
-      assert.notOk(templateData.isRunning)
+      assert.notOk(templateData.is_running)
     })
 
-    it('passes isRunning=false when build is failed', async function() {
+    it('passes is_running=false when build is failed', async function() {
       let renderer = new Renderer()
       let templateData
-      renderer.lastRender = 1234
       renderer.buildTemplate = function(data) {
         templateData = data
       }
 
-      await renderer._renderBuild('repo#100', {
-        updated: 2000,
+      mock('db', {
+        async getSteps() {
+          return []
+        }
+      })
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
         data: 'some build data',
         status: 'failed'
       })
 
-      assert.notOk(templateData.isRunning)
+      assert.notOk(templateData.is_running)
     })
 
-    it('passes isRunning=false when build is cancelled', async function() {
+    it('passes is_running=false when build is cancelled', async function() {
       let renderer = new Renderer()
       let templateData
-      renderer.lastRender = 1234
       renderer.buildTemplate = function(data) {
         templateData = data
       }
 
-      await renderer._renderBuild('repo#100', {
-        updated: 2000,
+      mock('db', {
+        async getSteps() {
+          return []
+        }
+      })
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
         data: 'some build data',
         status: 'cancelled'
       })
 
-      assert.notOk(templateData.isRunning)
+      assert.notOk(templateData.is_running)
+    })
+
+    it('renders redirection template when build has extra.oldBuildID', async function() {
+      let renderer = new Renderer()
+      let templateData
+
+      renderer.buildTemplate = function() {}
+      renderer.buildredirTemplate = function(data) {
+        templateData = data
+        return 'redirection page'
+      }
+
+      mock('db', {
+        async getSteps() {
+          return []
+        }
+      })
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
+        data: 'some build data',
+        status: 'cancelled',
+        extra: {
+          oldBuildID: 'repo#12345'
+        }
+      })
+
+      assert.deepEqual(templateData, { id: 100 })
+
+      assert.equal(
+        await readFile(resolve(statusDirectory, 'repo/12345.html')),
+        'redirection page'
+      )
     })
   })
 
   describe('Renderer._renderRepo', function() {
-    let statusDirectory
-
-    beforeEach(async function() {
-      statusDirectory = await tempDir()
-      mockConfig('statusDirectory', statusDirectory)
-    })
-
     it('calls _renderBuild for each build and renders repo page', async function() {
       let log = []
       let renderer = new Renderer()
@@ -292,54 +269,56 @@ describe('unit | status/render', function() {
       }
 
       let now = Date.now()
-      let earlier = now - 1000
+      renderer.lastRender = now - 1000
 
-      await renderer._renderRepo(now, 'repo', {
-        builds: {
-          'repo#1': {
-            data: 'build 1 data',
-            branch: 'mybranch',
-            updated: earlier
-          },
-          'repo#2': {
-            data: 'build 2 data',
-            tag: 'mytag',
-            updated: earlier
-          }
+      mock('db', {
+        async getBuilds() {
+          return  [
+            {
+              id: 2,
+              data: 'build 2 data',
+              ref_type: 'tag',
+              ref: 'mytag',
+              updated: now + 1
+            },
+            {
+              id: 1,
+              data: 'build 1 data',
+              ref_type: 'branch',
+              ref: 'mybranch',
+              updated: now
+            }
+          ]
         }
       })
+
+      await renderer._renderRepo(now, { id: 1, name: 'repo' })
 
       assert.deepEqual(templateData, {
         builds: [
           {
-            buildId: 'repo#2',
-            buildNum: '2',
+            id: 2,
             data: 'build 2 data',
-            link: 'repo/2.html',
-            queueTime: null,
             ref: 'mytag',
-            refMode: 'tag',
-            tag: 'mytag',
-            repoName: 'repo',
-            runTime: null,
-            updated: earlier
+            ref_type: 'tag',
+            updated: now + 1,
+            run_time: null,
+            build_link: '2.html',
+            queue_time: null
           },
           {
-            buildId: 'repo#1',
-            buildNum: '1',
+            id: 1,
             data: 'build 1 data',
-            link: 'repo/1.html',
-            queueTime: null,
             ref: 'mybranch',
-            refMode: 'branch',
-            branch: 'mybranch',
-            repoName: 'repo',
-            runTime: null,
-            updated: earlier
+            ref_type: 'branch',
+            updated: now,
+            run_time: null,
+            build_link: '1.html',
+            queue_time: null
           }
         ],
         now,
-        repoName: 'repo'
+        repo_name: 'repo'
       })
 
       assert.equal(
@@ -349,29 +328,32 @@ describe('unit | status/render', function() {
 
       assert.deepEqual(log, [
         [
-          'repo#1',
-          { data: 'build 1 data', branch: 'mybranch', updated: earlier }
+          { id: 1, name: 'repo' },
+          { id: 2, data: 'build 2 data', ref: 'mytag', ref_type: 'tag', updated: now + 1 }
         ],
-        ['repo#2', { data: 'build 2 data', tag: 'mytag', updated: earlier }]
+        [
+          { id: 1, name: 'repo' },
+          { id: 1, data: 'build 1 data', ref: 'mybranch', ref_type: 'branch', updated: now }
+        ]
       ])
     })
   })
 
   describe('Renderer._renderIndex', function() {
-    let statusDirectory
-
-    beforeEach(async function() {
-      statusDirectory = await tempDir()
-      mockConfig('statusDirectory', statusDirectory)
-    })
-
     it('renders index', async function() {
       let renderer = new Renderer()
+
       renderer.indexTemplate = function() {
         return 'rendered template data'
       }
 
-      await renderer._renderIndex(1, {})
+      mock('db', {
+        async getLastUpdatedBuilds() {
+          return []
+        }
+      })
+
+      await renderer._renderIndex(1)
 
       assert.equal(
         await readFile(resolve(statusDirectory, 'index.html')),
@@ -386,7 +368,13 @@ describe('unit | status/render', function() {
         templateData = data
       }
 
-      await renderer._renderIndex(1, { repo: { builds: {} } })
+      mock('db', {
+        async getLastUpdatedBuilds() {
+          return []
+        }
+      })
+
+      await renderer._renderIndex(1)
 
       assert.notOk(templateData.hasData)
     })
@@ -398,7 +386,13 @@ describe('unit | status/render', function() {
         templateData = data
       }
 
-      await renderer._renderIndex(1, { repo: { builds: { 'repo#1': {} } } })
+      mock('db', {
+        async getLastUpdatedBuilds() {
+          return [{ repo_name: 'repo', updated: 100 }]
+        }
+      })
+
+      await renderer._renderIndex(1)
 
       assert.ok(templateData.hasData)
     })
@@ -410,7 +404,13 @@ describe('unit | status/render', function() {
         templateData = data
       }
 
-      await renderer._renderIndex(1234, { repo: { builds: {} } })
+      mock('db', {
+        async getLastUpdatedBuilds() {
+          return []
+        }
+      })
+
+      await renderer._renderIndex(1234)
 
       assert.equal(templateData.now, 1234)
     })
@@ -423,70 +423,170 @@ describe('unit | status/render', function() {
       }
       renderer.indexBuildCount = 5
 
-      await renderer._renderIndex(1, {
-        repoA: {
-          builds: {
-            'repoA#1': { status: 'success', updated: 1 },
-            'repoA#2': { status: 'success', updated: 2 },
-            'repoA#3': { status: 'success', updated: 3 },
-            'repoA#4': { status: 'failed', updated: 4 },
-            'repoA#5': { status: 'success', updated: 5 },
-            'repoA#6': { status: 'cancelled', updated: 6 },
-            'repoA#7': { status: 'success', updated: 7 },
-            'repoA#8': { status: 'failed', updated: 8 },
-            'repoA#9': { status: 'success', updated: 9 },
-            'repoA#10': { status: 'success', updated: 11 },
-            'repoA#11': { status: 'success', updated: 12 }
-          }
-        },
-        repoB: {
-          builds: {
-            'repoB#1': { status: 'failed', updated: 10 }
-          }
+      mock('db', {
+        async getLastUpdatedBuilds() {
+          return [
+            { id: 1, updated: 100 },
+            { id: 2, updated: 99 },
+            { id: 3, updated: 98 },
+            { id: 4, updated: 97 },
+            { id: 5, updated: 96 }
+          ]
         }
       })
 
-      assert.deepEqual(templateData.builds.map((b) => b.buildId), [
-        'repoA#11',
-        'repoA#10',
-        'repoB#1',
-        'repoA#9',
-        'repoA#8'
+      await renderer._renderIndex(1)
+
+      assert.deepEqual(templateData.builds.map((b) => b.id), [1, 2, 3, 4, 5])
+    })
+
+    it('does not render when no build was updated', async function() {
+      let renderer = new Renderer()
+      let rendered = false
+
+      renderer.lastRender = 200
+      renderer.indexTemplate = function() {
+        rendered = true
+      }
+
+      mock('db', {
+        async getLastUpdatedBuilds() {
+          return [
+            { id: 1, updated: 100 },
+            { id: 2, updated: 99 },
+            { id: 3, updated: 98 },
+            { id: 4, updated: 97 },
+            { id: 5, updated: 96 }
+          ]
+        }
+      })
+
+      await renderer._renderIndex(1)
+
+      assert.notOk(rendered)
+    })
+  })
+
+  describe('Renderer._render', function() {
+    it('loads repos, renders each repo, renders index, sets rendering to false', async function() {
+      let log = []
+      let renderer = new Renderer()
+
+      mock('db', {
+        async getRepos() {
+          log.push('fetch repos')
+
+          return [
+            { id: 1, name: 'repo 1' },
+            { id: 2, name: 'repo 2' }
+          ]
+        }
+      })
+
+      renderer._renderRepo = async function(now, repo) {
+        assert.closeTo(now, Date.now(), 500)
+        log.push(`render with ${repo.name}`)
+      }
+
+      renderer._renderIndex = async function(now) {
+        assert.closeTo(now, Date.now(), 500)
+        log.push('render index')
+      }
+
+      renderer.rendering = true
+      await renderer._render()
+
+      assert.notOk(renderer.rendering)
+
+      assert.deepEqual(log, [
+        'fetch repos',
+        'render with repo 1',
+        'render with repo 2',
+        'render index'
       ])
+    })
+
+    it('renders again when shouldRefresh is marked', async function() {
+      let log = []
+      let renderer = new Renderer()
+
+      mock('db', {
+        async getRepos() {
+          log.push('fetch repos')
+
+          return [
+            { id: 1, name: 'repo 1' },
+            { id: 2, name: 'repo 2' }
+          ]
+        }
+      })
+
+      renderer._renderRepo = async function(now, repo) {
+        assert.closeTo(now, Date.now(), 500)
+        log.push(`render with ${repo.name}`)
+      }
+
+      renderer._renderIndex = async function(now) {
+        assert.closeTo(now, Date.now(), 500)
+        log.push('render index')
+      }
+
+      renderer.shouldRefresh = true
+      await renderer._render()
+
+      assert.deepEqual(log, [
+        'fetch repos',
+        'render with repo 1',
+        'render with repo 2',
+        'render index',
+        'fetch repos',
+        'render with repo 1',
+        'render with repo 2',
+        'render index'
+      ])
+
+      assert.notOk(renderer.shouldRefresh)
     })
   })
 
   describe('Renderer.render', function() {
-    it('loads repo status, renders builds, renders index and updates last render', async function() {
-      let log = []
+    it('queues an additional render when rendering is already in progress', async function() {
       let renderer = new Renderer()
 
-      renderer._readReposStatus = async function() {
-        log.push('read status')
-        return { repo1: 'repo 1 data', repo2: 'repo 2 data' }
-      }
-      renderer._renderRepo = async function(now, repo, status) {
-        log.push(`render with ${repo} ${status}`)
-      }
-      renderer._renderIndex = async function(now, status) {
-        assert.equal(now, 1234)
-        assert.deepEqual(status, { repo1: 'repo 1 data', repo2: 'repo 2 data' })
-        log.push('render index')
-      }
-      renderer._setLastRender = async function(now) {
-        assert.equal(now, 1234)
-        log.push('set last render')
+      let renderEntered = 0
+      let renderExited = 0
+      let renderCanResolve = false
+
+      renderer._render = async function() {
+        renderEntered++
+        await waitUntil(() => renderCanResolve)
+        this.rendering = false
+        renderExited++
       }
 
-      await renderer.render(1234)
+      renderer.render()
+      await wait(20)
 
-      assert.deepEqual(log, [
-        'read status',
-        'render with repo1 repo 1 data',
-        'render with repo2 repo 2 data',
-        'render index',
-        'set last render'
-      ])
+      renderer.render()
+      await wait(20)
+
+      renderer.render()
+      await wait(20)
+
+      renderer.render()
+      await wait(20)
+
+      renderCanResolve = true
+      await waitUntil(() => renderExited === renderEntered)
+
+      assert.equal(renderEntered, 1)
+      assert.ok(renderer.shouldRefresh)
+
+      renderer.render()
+      await wait(20)
+      await waitUntil(() => renderExited === renderEntered)
+
+      assert.equal(renderEntered, 2)
     })
   })
 })

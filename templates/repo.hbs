@@ -1,4 +1,4 @@
-<title>{{repoName}} - Peon</title>
+<title>{{repo_name}} - Peon</title>
 <meta http-equiv="refresh" content="5">
 <style>
   .status-pending,
@@ -19,7 +19,7 @@
 <h1>Peon status</h1>
 <a href="index.html">Peon status page</a>
 
-<h2>Builds for {{repoName}}</h2>
+<h2>Builds for {{repo_name}}</h2>
 
 <table width="100%">
   <tr>
@@ -48,10 +48,10 @@
   {{#each builds}}
     <tr class="status-{{status}}">
       <td>
-        <a href="{{link}}">{{buildNum}}</a>
+        <a href="{{build_link}}">{{id}}</a>
       </td>
       <td>
-        {{refMode}}
+        {{ref_type}}
       </td>
       <td>
         {{ref}}
@@ -64,14 +64,14 @@
       </td>
       <td>
         {{#if start}}
-          {{time queueTime}}
+          {{time queue_time}}
         {{else}}
           &ndash;
         {{/if}}
       </td>
       <td>
         {{#if end}}
-          {{time runTime}}
+          {{time run_time}}
         {{else}}
           &ndash;
         {{/if}}
