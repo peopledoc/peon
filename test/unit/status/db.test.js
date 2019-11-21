@@ -148,6 +148,13 @@ describe('Unit | status/db', function() {
         builds.map((b) => b.id),
         [6, 5, 4, 3, 2, 1]
       )
+
+      assert.deepEqual(builds[4], {
+        id: 2, ref_type: 'tag', ref: 'mytag', sha: 'sha2', enqueued: 4,
+        updated: 5, start: 6, end: 7, status: 'status',
+        extra: { json: 'value' },
+        repo_id: 1, repo_name: 'myrepo1', repo_url: 'myurl1'
+      })
     })
 
     it('limits output count', async function() {
