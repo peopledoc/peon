@@ -778,10 +778,12 @@ describe('unit | build/build', function() {
 
     it('deploys locally, creating intermediate directories', async function() {
       let build = new Build('ID', { head_commit: { id: 'sha' } }, {})
+      let destDir = await tempDir()
 
       build.env = new Environment({ VAR: 'from_env' })
       build.destination = {
-        destination: await tempDir()
+        destination: destDir,
+        absoluteUrl: 'http://my/destination/url'
       }
       build.pathInDestination = 'path/in/destination/$VAR'
       build.peonConfig = { output: 'output' }
@@ -819,11 +821,16 @@ describe('unit | build/build', function() {
         }
       )
 
-      await build._deploy()
+      let ret = await build._deploy()
+
+      assert.deepEqual(ret, {
+        outputURL: 'http://my/destination/url/path/in/destination/from_env',
+        localDirectory: resolve(destDir, 'path/in/destination/from_env')
+      })
 
       assert.ok(
         (await stat(
-          resolve(build.destination.destination, 'path/in/destination')
+          resolve(destDir, 'path/in/destination')
         )).isDirectory()
       )
 
@@ -831,7 +838,7 @@ describe('unit | build/build', function() {
         options: ['partial', 'recursive', 'compress'],
         src: `${resolve(build.workspace, 'output')}/`,
         dst: `${resolve(
-          build.destination.destination,
+          destDir,
           'path/in/destination/from_env'
         )}/`,
         executed: true
@@ -848,7 +855,8 @@ describe('unit | build/build', function() {
       build.env = new Environment({ VAR: 'from_env' })
       build.destination = {
         destination: 'user@host:path/to/dest',
-        shell: 'someshell'
+        shell: 'someshell',
+        absoluteUrl: 'http://my/remote/url'
       }
       build.pathInDestination = 'path/in/destination/$VAR'
       build.peonConfig = { output: 'output' }
@@ -895,7 +903,12 @@ describe('unit | build/build', function() {
         }
       )
 
-      await build._deploy()
+      let ret = await build._deploy()
+
+      assert.deepEqual(ret, {
+        outputURL: 'http://my/remote/url/path/in/destination/from_env',
+        localDirectory: null
+      })
 
       assert.ok(outputMoved)
 
@@ -972,8 +985,11 @@ describe('unit | build/build', function() {
       build.pathInDestination = 'path/$VAR'
 
       build._runStep = function(_, step) {
-        log.push({ what: 'step', step: step() })
+        let stepDescr = step()
+        log.push({ what: 'step', step: stepDescr })
+        return `${stepDescr} return value`
       }
+
       build._updateRepository = fail
         ? () => {
           throw new Error('oopsie')
@@ -1012,7 +1028,7 @@ describe('unit | build/build', function() {
           args: [
             'ID',
             'success',
-            { outputURL: 'https://example.com/url/path/value' }
+            'deploy return value'
           ]
         }
       ])
