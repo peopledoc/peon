@@ -90,6 +90,7 @@ describe('unit | status/render', function() {
         start: 1000,
         end: 2000,
 
+        is_cleaned: false,
         is_running: false,
         queue_time: 500,
         run_time: 1000,
@@ -304,7 +305,8 @@ describe('unit | status/render', function() {
             updated: now + 1,
             run_time: null,
             build_link: '2.html',
-            queue_time: null
+            queue_time: null,
+            is_cleaned: false
           },
           {
             id: 1,
@@ -314,7 +316,8 @@ describe('unit | status/render', function() {
             updated: now,
             run_time: null,
             build_link: '1.html',
-            queue_time: null
+            queue_time: null,
+            is_cleaned: false
           }
         ],
         now,
