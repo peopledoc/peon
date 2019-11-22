@@ -148,14 +148,29 @@ describe('unit | build/dispatcher', function() {
       assert.notOk(startBuildCalled)
     })
 
-    it('does not do anything when payload has no head_commit', async function() {
-      let startBuildCalled
+    it('starts a cleanup job and enqueues it when findRepository returns stuff and payload has no head_commit', async function() {
+      let startBuildCalled, cleanupArgs, queuedFunction
 
       mock('status', {
         startBuild() {
           startBuildCalled = true
         }
       })
+
+      mock('status', {
+        cleanupLocalBuilds() {
+          cleanupArgs = [...arguments]
+        }
+      })
+
+      mock(
+        'Queue',
+        class Queue {
+          run(fun) {
+            queuedFunction = fun
+          }
+        }
+      )
 
       let dispatcher = new Dispatcher()
       dispatcher.findRepository = () => {
@@ -169,6 +184,9 @@ describe('unit | build/dispatcher', function() {
       await dispatcher.dispatch('push', {})
 
       assert.notOk(startBuildCalled)
+      assert.ok(queuedFunction)
+      await queuedFunction()
+      assert.deepEqual(cleanupArgs, ['repo', 'branch', 'mybranch'])
     })
 
     it('starts a build and enqueues it when findRepository returns stuff', async function() {
