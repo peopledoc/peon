@@ -148,6 +148,29 @@ describe('unit | build/dispatcher', function() {
       assert.notOk(startBuildCalled)
     })
 
+    it('does not do anything when payload has no head_commit', async function() {
+      let startBuildCalled
+
+      mock('status', {
+        startBuild() {
+          startBuildCalled = true
+        }
+      })
+
+      let dispatcher = new Dispatcher()
+      dispatcher.findRepository = () => {
+        return {
+          name: 'repo',
+          url: 'git@example.com:org/repo',
+          refMode: 'branch',
+          ref: 'mybranch'
+        }
+      }
+      await dispatcher.dispatch('push', {})
+
+      assert.notOk(startBuildCalled)
+    })
+
     it('starts a build and enqueues it when findRepository returns stuff', async function() {
       let buildCtorArgs, buildCalled, startBuildArgs, queuedFunction
 
