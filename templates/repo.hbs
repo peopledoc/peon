@@ -80,9 +80,11 @@
         {{status}}
       </td>
       <td>
-        {{#if extra.outputURL}}
-          <a href="{{extra.outputURL}}" target="_blank">Build output</a>
-        {{/if}}
+        {{#unless is_cleaned}}
+          {{#if extra.outputURL}}
+            <a href="{{extra.outputURL}}" target="_blank">Build output</a>
+          {{/if}}
+        {{/unless}}
       </td>
     </tr>
   {{/each}}

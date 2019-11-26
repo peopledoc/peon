@@ -128,6 +128,20 @@ describe('Unit | status/db', function() {
     })
   })
 
+  describe('db.getBuildsFor', function() {
+    it('returns builds for a specific repo and ref', async function() {
+      let db = await getDatabase([fixtures.repos, fixtures.builds])
+
+      let builds = await db.getBuildsFor({ repoName: 'myrepo1', refMode: 'branch', ref: 'mybranch' })
+      assert.deepEqual(builds, [
+        {
+          id: 1, ref_type: 'branch', ref: 'mybranch', sha: 'sha1', enqueued: 0,
+          updated: 1, start: 2, end: 3, status: 'status', extra: null
+        }
+      ])
+    })
+  })
+
   describe('db.getStaleBuilds', function() {
     it('returns running or pending build IDs', async function() {
       let db = await getDatabase([fixtures.repos, fixtures.builds])
@@ -203,6 +217,18 @@ describe('Unit | status/db', function() {
 
       assert.include(build, { status: 'newstatus', start: 2, end: 3, extra: null })
       assert.closeTo(build.updated, Date.now(), 500)
+    })
+
+    it('does not set updated field when status is cleaned', async function() {
+      let db = await getDatabase([
+        fixtures.repos,
+        fixtures.builds
+      ])
+
+      await db.updateBuild({ id: 1, status: 'cleaned' })
+      let [, build] = await db.getBuilds(1)
+
+      assert.include(build, { id: 1, status: 'cleaned', updated: 1 })
     })
 
     it('sets start time when start is not set and status is not cancelled or failed', async function() {

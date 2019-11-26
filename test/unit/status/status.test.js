@@ -1,4 +1,5 @@
 const { assert } = require('chai')
+const { stat, statSync } = require('fs-extra')
 const { lookup, mock, mockConfig, tempDir } = require('../../helpers')
 const { Status } = lookup()
 
@@ -171,6 +172,49 @@ describe('unit | status/status', function() {
         'update build#43: cancelled',
         'gh status for build#43: error, Peon stale build was aborted'
       ])
+    })
+  })
+
+  describe('Status.cleanupLocalBuilds', function() {
+    it('removes matching local build directories and marks builds as cleaned', async function() {
+      let status = new Status()
+      let log = []
+
+      let shouldStay = await tempDir()
+      let shouldBeRemoved1 = await tempDir()
+      let shouldBeRemoved2 = await tempDir()
+
+      mock('db', {
+        getBuildsFor({ repoName, refMode, ref }) {
+          log.push(`get builds for ${repoName} on ${refMode} ${ref}`)
+
+          return [
+            { id: 1, status: 'pending', extra: { localDirectory: shouldStay } },
+            { id: 2, status: 'running', extra: { localDirectory: shouldStay } },
+            { id: 3, status: 'success', extra: {} },
+            { id: 4, status: 'success' },
+            { id: 5, status: 'cleaned', extra: { localDirectory: shouldStay } },
+            { id: 6, status: 'success', extra: { localDirectory: shouldBeRemoved1 } },
+            { id: 7, status: 'success', extra: { localDirectory: shouldBeRemoved2 } }
+          ]
+        },
+
+        updateBuild({ id, status, extra }) {
+          log.push(`update build#${id} with status ${status}${extra ? ` and extra ${JSON.stringify(extra)}` : ''}`)
+        }
+      })
+
+      await status.cleanupLocalBuilds('myrepo', 'branch', 'mybranch')
+
+      assert.deepEqual(log, [
+        'get builds for myrepo on branch mybranch',
+        'update build#6 with status cleaned',
+        'update build#7 with status cleaned'
+      ])
+
+      assert.ok((await stat(shouldStay)).isDirectory())
+      assert.throws(() => statSync(shouldBeRemoved1), 'ENOENT')
+      assert.throws(() => statSync(shouldBeRemoved2), 'ENOENT')
     })
   })
 })
