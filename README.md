@@ -252,6 +252,6 @@ tags:
 
 _Note:_ you can only trigger builds on tags from webhooks, not from the watcher.
 
-# License
+# Copyright
 
 © 2019 Nicolas Joyard, Xavier Cambar for PeopleDoc
