@@ -48,7 +48,8 @@ The configuration file contains the following keys:
     build status updates)
   - `indexBuildCount`: maximum number of builds to show on status index page,
     defaults to all builds
-  - `githubAPIToken`: a GitHub API token used to update build status on commits.
+  - `githubAPIToken`: a GitHub API token used to update build status on commits
+    (requires at least the `repo:status` scope).
 
 - **Watcher configuration:** enable this when you want peon to poll git
   repositories at regular intervals (useful when the machine is not reachable
