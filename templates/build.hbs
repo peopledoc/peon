@@ -36,6 +36,45 @@ Enqueued at {{date enqueued}}<br>
   {{#if extra.outputURL}}<a href="{{extra.outputURL}}" target="_blank">Link to deployed build output</a><br>{{/if}}
 {{/if}}
 
+{{#if retrigger}}
+  <br>
+  <button id="retrigger">Retrigger build</button>
+  <script>
+    (function() {
+      let button = document.getElementById('retrigger')
+
+      async function retrigger() {
+        let response
+        button.disabled = true
+
+        try {
+          response = await fetch('{{retrigger.url}}', {
+            method: 'POST',
+            headers: {{{retrigger.headers}}},
+            body: {{{retrigger.payload}}}
+          })
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+          }
+        } catch(e) {
+          console.error('Retrigger error:', e)
+          alert('Build retrigger failed, please check the console and Peon logs')
+          button.disabled = false
+          return
+        }
+
+        location.href = "{{repo_link}}"
+      }
+
+      button.addEventListener('click', function(e) {
+        retrigger()
+        e.preventDefault()
+      })
+    })()
+  </script>
+{{/if}}
+
 {{#each steps}}
   <h2 class="status-{{status}}">{{description}} <span class="duration">({{time duration}})</span></h2>
   {{#if output}}

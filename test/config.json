@@ -1,4 +1,5 @@
 {
+  "webhooks": {},
   "logger": {
     "level": "emerg"
   }

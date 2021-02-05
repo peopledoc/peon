@@ -97,6 +97,78 @@ describe('unit | status/render', function() {
         repo_link: 'repo.html',
         repo_name: 'repo',
         build_link: '100.html',
+        retrigger: null,
+
+        steps: [
+          { step: 'step1', start: 100, end: 200, duration: 100 },
+          { step: 'step2', start: 100, duration: null }
+        ]
+      })
+
+      assert.equal(
+        await readFile(resolve(statusDirectory, '100.html')),
+        'template render output'
+      )
+    })
+
+    it('passes retrigger data when build is not running and a webhook url is set in config', async function() {
+      let renderer = new Renderer()
+      let templateData
+
+      mockConfig('webhooks', { secret: 'shhhhh', url: 'https://foo/bar' })
+
+      mock('db', {
+        async getSteps(id) {
+          assert.equal(id, 100)
+          return [
+            { step: 'step1', start: 100, end: 200 },
+            { step: 'step2', start: 100 }
+          ]
+        }
+      })
+
+      renderer.buildTemplate = function(data) {
+        templateData = data
+        return 'template render output'
+      }
+
+      await renderer._renderBuild({ name: 'repo' }, {
+        id: 100,
+        data: 'some build data',
+        enqueued: 500,
+        start: 1000,
+        end: 2000,
+        ref_type: 'branch',
+        ref: 'mysuperbranch'
+      })
+
+      assert.deepEqual(templateData, {
+        id: 100,
+        data: 'some build data',
+        enqueued: 500,
+        start: 1000,
+        end: 2000,
+        ref_type: 'branch',
+        ref: 'mysuperbranch',
+
+        is_cleaned: false,
+        is_running: false,
+        queue_time: 500,
+        run_time: 1000,
+        repo_link: 'repo.html',
+        repo_name: 'repo',
+        build_link: '100.html',
+
+        retrigger: {
+          headers: JSON.stringify({
+            'Content-Type': 'application/json',
+            'x-github-delivery': 'manual-peon-retrigger',
+            'x-github-event': 'push',
+            'x-hub-signature': 'sha1=3ca4076677a9a2ad1f998141cb2a507c054961ec'
+          }),
+          payload: '\'{"head_commit":{},"ref":"refs/heads/mysuperbranch","repository":{"name":"repo"}}\'',
+          url: 'https://foo/bar'
+        },
 
         steps: [
           { step: 'step1', start: 100, end: 200, duration: 100 },

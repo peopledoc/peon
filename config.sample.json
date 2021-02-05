@@ -13,7 +13,8 @@
   "webhooks": {
     "enabled": true,
     "port": 1234,
-    "secret": "peon-super-secret"
+    "secret": "peon-super-secret",
+    "url": "https://my.host/peon-webhooks"
   },
 
   "git": {
