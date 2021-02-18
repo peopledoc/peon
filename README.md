@@ -71,8 +71,8 @@ The configuration file contains the following keys:
     on the public endpoint to this port.
   - `webhooks.secret`: set it to something secret that you will configure on
     your repositories on Github.
-  - `webhooks.url`: optional, sets the URL where webhook payloads for manual job
-    retriggers from status pages should be sent.
+  - `webhooks.url`: (optional) URL where webhook payloads, for manual job
+    retriggers from status pages, should be sent.
 
 - **Build output destinations configuration:** configure destinations where Peon
   will store build outputs (using rsync). Destinations can be local or remote.
