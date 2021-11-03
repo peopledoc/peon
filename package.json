@@ -20,6 +20,18 @@
     "Xavier Cambar <xavier_cambar@ultimatesoftware.com>"
   ],
   "license": "MIT",
+  "keywords": [
+    "artifact",
+    "build",
+    "cd",
+    "continuous",
+    "deploy",
+    "deployment",
+    "minimal",
+    "peon",
+    "repository",
+    "tool"
+  ],
   "dependencies": {
     "@octokit/rest": "^16.17.0",
     "body-parser": "^1.18.3",
