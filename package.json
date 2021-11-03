@@ -1,18 +1,37 @@
 {
   "name": "peon",
+  "description": "Minimal CD tool that can be used to run build commands on `git` repositories and deploy built artifacts locally.",
   "version": "0.1.0",
+  "license": "MIT",
+  "author": {
+    "name": "PeopleDoc",
+    "url": "https://github.com/peopledoc"
+  },
+  "contributors": [
+    "Nicolas Joyard <nicolas_joyard@ultimatesoftware.com>",
+    "Xavier Cambar <xavier_cambar@ultimatesoftware.com>"
+  ],
+  "homepage": "https://github.com/peopledoc/peon",
+  "repository": "https://github.com/peopledoc/peon",
+  "bugs": "https://github.com/peopledoc/peon/issues",
+  "keywords": [
+    "artifact",
+    "build",
+    "cd",
+    "continuous",
+    "deploy",
+    "deployment",
+    "minimal",
+    "peon",
+    "repository",
+    "tool"
+  ],
+  "main": "index.js",
   "scripts": {
     "start": "node ./index.js",
     "test": "PEON_CONFIG=$(pwd)/test/config.json mocha --file 'test/init.js' --recursive 'test/**/*.test.js'",
     "lint": "eslint index.js lib scripts test"
   },
-  "main": "index.js",
-  "repository": "git@github.com:peopledoc/peon.git",
-  "contributors": [
-    "Nicolas Joyard <nicolas_joyard@ultimatesoftware.com>",
-    "Xavier Cambar <xavier_cambar@ultimatesoftware.com>"
-  ],
-  "license": "MIT",
   "dependencies": {
     "@octokit/rest": "^16.17.0",
     "body-parser": "^1.18.3",
