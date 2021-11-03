@@ -1,5 +1,6 @@
 {
   "name": "peon",
+  "description": "Minimal CD tool that can be used to run build commands on `git` repositories and deploy built artifacts locally.",
   "version": "0.1.0",
   "scripts": {
     "start": "node ./index.js",
