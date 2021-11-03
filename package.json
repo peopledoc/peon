@@ -8,7 +8,7 @@
     "lint": "eslint index.js lib scripts test"
   },
   "main": "index.js",
-  "repository": "git@github.com:peopledoc/peon.git",
+  "repository": "https://github.com/peopledoc/peon",
   "contributors": [
     "Nicolas Joyard <nicolas_joyard@ultimatesoftware.com>",
     "Xavier Cambar <xavier_cambar@ultimatesoftware.com>"
