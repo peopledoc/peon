@@ -11,6 +11,10 @@
   "homepage": "https://github.com/peopledoc/peon",
   "repository": "https://github.com/peopledoc/peon",
   "bugs": "https://github.com/peopledoc/peon/issues",
+  "author": {
+    "name": "PeopleDoc",
+    "url": "https://github.com/peopledoc"
+  },
   "contributors": [
     "Nicolas Joyard <nicolas_joyard@ultimatesoftware.com>",
     "Xavier Cambar <xavier_cambar@ultimatesoftware.com>"
